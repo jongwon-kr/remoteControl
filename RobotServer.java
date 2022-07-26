@@ -94,7 +94,11 @@ public class RobotServer {
 				try {
 					msg = in.readLine();
 					if (msg != null) {
+						System.out.println(msg);
 						// client 메시지 관련
+						if (msg.startsWith("#capture#")) {
+							sendMessage(msg.substring(9));
+						}
 					} else {
 						break;
 					}
@@ -128,10 +132,10 @@ public class RobotServer {
 	class Check_client extends TimerTask { // TimerTask에서 상속 받으면 run()메서드 override해야됨
 		public void run() {
 			int client_size = v_client_list.size();
-			
+
 			System.out.println("*****************************");
 			System.out.println("*          상태 check        *");
-			System.out.println("*           clients : " + client_size + "     *");
+			System.out.println("*         clients : " + client_size + "       *");
 			System.out.println("*****************************");
 
 			for (int i = 0; i < client_size; i++) {

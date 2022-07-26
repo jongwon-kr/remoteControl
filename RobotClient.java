@@ -5,6 +5,9 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -13,6 +16,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,18 +54,16 @@ public class RobotClient extends JFrame
 	Vector v_client_address;
 
 	BufferedReader in = null;
-	PrintWriter out;
+	static PrintWriter out;
 	Thread t_connection;
 	String pathname;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
 	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
+	static Image img = null; // 생성자. UI 배치.
 
-	Robot r;
-
-	JFrame remoteScreen; // 원격제어 프레임
-
+	int shareTime = 600;
 	JPanel top_panel; // 상단 패널
 	JButton connect; // 연결 버튼
 	JTextField conTf; // 연결 textfield
@@ -74,7 +76,6 @@ public class RobotClient extends JFrame
 
 	public RobotClient() {
 		super("원격 연결");
-		setRemoteScreen();
 		getContentPane().add(setUI()).setBackground(Color.white);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setSize(484, 363);
@@ -143,13 +144,6 @@ public class RobotClient extends JFrame
 		return mainSplitPane;
 	}
 
-	// 원격제어용 프레임 설정
-	public void setRemoteScreen() {
-		remoteScreen = new JFrame();
-		remoteScreen.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-		remoteScreen.setVisible(false);
-	}
-
 	public void Alert(String alert_title, String alert_message) {
 		// alert 메소드
 		dialog = new JDialog(this, alert_title, true);
@@ -167,9 +161,10 @@ public class RobotClient extends JFrame
 	// 이벤트
 	public void actionPerformed(ActionEvent e) {
 		String command = e.getActionCommand();
-
+		Thread t;
 		if (command.equals("connect")) {
-			remoteScreen.setVisible(true);
+			t = new Thread(new sendScreen());
+			t.start();
 		}
 	}
 
@@ -255,7 +250,6 @@ public class RobotClient extends JFrame
 				} catch (Exception ex) {
 
 				}
-
 				P2p_connection pc = new P2p_connection(p2p_client, this);
 				pc.start();
 			}
@@ -318,6 +312,93 @@ public class RobotClient extends JFrame
 			}
 		}
 
+	}
+
+	class sendScreen extends JFrame implements Runnable, MouseListener {
+		public sendScreen() {
+			super("화면 공유");
+			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+			setVisible(true);
+		}
+
+		public void run() {
+			try {
+				while (shareTime != 0) {
+					Thread.sleep(10);
+					setSize(this.getWidth(), this.getHeight());
+					capture();
+					shareTime--;
+					System.out.println(shareTime);
+					if (shareTime == 0) {
+						shareTime = 1000;
+						break;
+					}
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		public void capture() {
+			Robot robot;
+			BufferedImage bufImage = null;
+			try {
+				robot = new Robot();
+				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
+				bufImage = robot.createScreenCapture(area); // Robot 클래스를 이용하여 스크린 캡쳐.
+				// Graphics2D g2d = bufImage.createGraphics();
+				int w = this.getWidth();
+				int h = this.getHeight();
+				img = bufImage.getScaledInstance(w, h, Image.SCALE_DEFAULT);
+				// this.repaint();
+				this.drawImage(img, w, h);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		public void drawImage(Image img, int x, int y) {
+			Graphics g = this.getGraphics();
+			g.drawImage(img, 0, 0, x, y, this);
+			this.paint(g);
+			this.repaint();
+		}
+
+		public void paint(Graphics g) {
+			if (RobotClient.img != null) {
+				g.drawImage(RobotClient.img, 0, 0, RobotClient.img.getWidth(this), RobotClient.img.getHeight(this),
+						this);
+			}
+		}
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			System.out.println("X : " + e.getX() + " Y : " + e.getY());
+		}
+
+		@Override
+		public void mousePressed(MouseEvent e) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e) {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+			// TODO Auto-generated method stub
+
+		}
 	}
 
 	public static void main(String[] args) {
