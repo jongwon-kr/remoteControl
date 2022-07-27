@@ -25,16 +25,12 @@ public class RobotServer {
 				try {
 					// client를 관리할 ServerSocket 객체 생성
 					Socket server = serverSocket.accept();
-
 					// client의 io작업을 위한 Connection 객체 생성
 					Connection c = new Connection(server, this);
-
 					// client목록에 추가
 					addClient(c);
-
 					c.start();
 				} catch (Exception e) {
-
 				}
 			}
 		} catch (Exception e) {
@@ -80,7 +76,6 @@ public class RobotServer {
 			try {
 				// inputStream
 				in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
 				// outputStream
 				out = new PrintWriter(socket.getOutputStream());
 			} catch (Exception e) {
@@ -96,14 +91,12 @@ public class RobotServer {
 					if (msg != null) {
 						System.out.println(msg);
 						// client 메시지 관련
-						if (msg.startsWith("#capture#")) {
-							sendMessage(msg.substring(9));
-						}
+						messageAll(msg);
 					} else {
 						break;
 					}
 				} catch (Exception e) {
-
+					robotServer.removeClient(this);
 				}
 			}
 		}

@@ -1,5 +1,6 @@
 package remoteConnect;
 
+import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -12,10 +13,9 @@ import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -38,18 +38,15 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 
-public class RobotClient extends JFrame
-		implements KeyListener, MouseListener, ActionListener, Runnable, ListSelectionListener {
+public class RobotClient extends JFrame implements ActionListener, Runnable {
 	ServerSocket server_socket;
 	Socket socket_to_host;
 	String host_address = "127.0.0.1";
 	String s_local_address;
-	// server¿Í Åë½ÅÇÒ port¹øÈ£
+	// serverì™€ í†µì‹ í•  portë²ˆí˜¸
 	int port_to_host_number = 12156;
-	// client³¢¸® Åë½ÅÇÒ port¹øÈ£
+	// clientë¼ë¦¬ í†µì‹ í•  portë²ˆí˜¸
 	int p2p_port_number = 12166;
 	Vector v_client_address;
 
@@ -59,23 +56,24 @@ public class RobotClient extends JFrame
 	String pathname;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	final int SCREEN_WIDTH = screenSize.width; // È­¸é °¡·Î ³Êºñ
-	final int SCREEN_HEIGHT = screenSize.height; // È­¸é ¼¼·Î ³Êºñ
-	static Image img = null; // »ı¼ºÀÚ. UI ¹èÄ¡.
+	final int SCREEN_WIDTH = screenSize.width; // í™”ë©´ ê°€ë¡œ ë„ˆë¹„
+	final int SCREEN_HEIGHT = screenSize.height; // í™”ë©´ ì„¸ë¡œ ë„ˆë¹„
+	static Image img = null; // ìƒì„±ì. UI ë°°ì¹˜.
 
 	int shareTime = 600;
-	JPanel top_panel; // »ó´Ü ÆĞ³Î
-	JButton connect; // ¿¬°á ¹öÆ°
-	JTextField conTf; // ¿¬°á textfield
+	JPanel top_panel; // ìƒë‹¨ íŒ¨ë„
+	JButton connect; // ì—°ê²° ë²„íŠ¼
+	JTextField conTf; // ì—°ê²° textfield
 
-	JPanel centerLeft_panel; // Áß¾Ó ÆĞ³Î
+	JPanel centerLeft_panel; // ì¤‘ì•™ íŒ¨ë„
 	JPanel centerRight_panel;
-	JSplitPane centerSplitPane; // Áß¾Ó splitpane
-	JSplitPane mainSplitPane; // ¸ŞÀÎÈ­¸é splitpane
+	JSplitPane centerSplitPane; // ì¤‘ì•™ splitpane
+	JSplitPane mainSplitPane; // ë©”ì¸í™”ë©´ splitpane
 	JDialog dialog;
 
 	public RobotClient() {
-		super("¿ø°İ ¿¬°á");
+		super("ì›ê²© ì—°ê²°");
+		ConnectCreation();
 		getContentPane().add(setUI()).setBackground(Color.white);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setSize(484, 363);
@@ -93,13 +91,13 @@ public class RobotClient extends JFrame
 			t_connection = new Thread(this);
 			t_connection.start();
 			P2p_server robot_server = new P2p_server(server_socket);
-			// p2p¼­¹ö Å¬·¡½º
+			// p2pì„œë²„ í´ë˜ìŠ¤
 		} catch (UnknownHostException e) {
-			Alert("°æ°í", "¾Ë¼ö¾ø´Â È£½ºÆ®ÀÔ´Ï´Ù.");
+			Alert("ê²½ê³ ", "ì•Œìˆ˜ì—†ëŠ” í˜¸ìŠ¤íŠ¸ì…ë‹ˆë‹¤.");
 			return 0;
 		} catch (IOException e) {
 			e.printStackTrace();
-			Alert("°æ°í", "¿¬°á¿¡ ½ÇÆĞÇÏ¿´½À´Ï´Ù.");
+			Alert("ê²½ê³ ", "ì—°ê²°ì— ì‹¤íŒ¨í•˜ì˜€ìŠµë‹ˆë‹¤.");
 			return 0;
 		} // try-catch
 		return 1;
@@ -108,7 +106,7 @@ public class RobotClient extends JFrame
 	public void getIpAddress() {
 		InetAddress local_ip = socket_to_host.getLocalAddress();
 		s_local_address = local_ip.toString();
-		// À§¿¡¼­ ±¸ÇÏ¸é /127.0.0.1 Ã³·³ ³ª¿À´Âµ¥, ¾ÕÀÇ ½½·¡½¬(/) ¸¦ Á¦°ÅÇÏ±â À§ÇÑ ÄÚµå ºÎºĞ
+		// ìœ„ì—ì„œ êµ¬í•˜ë©´ /127.0.0.1 ì²˜ëŸ¼ ë‚˜ì˜¤ëŠ”ë°, ì•ì˜ ìŠ¬ë˜ì‰¬(/) ë¥¼ ì œê±°í•˜ê¸° ìœ„í•œ ì½”ë“œ ë¶€ë¶„
 		for (int i = s_local_address.length() - 1; i >= 0; i--) {
 			if (s_local_address.charAt(i) == '/') {
 				s_local_address = s_local_address.substring(i + 1);
@@ -117,7 +115,7 @@ public class RobotClient extends JFrame
 		} // for
 	}
 
-	// MainÈ­¸é UI¼³Á¤
+	// Mainí™”ë©´ UIì„¤ì •
 	public Component setUI() {
 		top_panel = new JPanel(new FlowLayout());
 		centerLeft_panel = new JPanel();
@@ -126,8 +124,8 @@ public class RobotClient extends JFrame
 		conTf = new JTextField();
 		conTf.setPreferredSize(new Dimension(100, 30));
 
-		// ¿¬°á ¹öÆ°
-		connect = new JButton("¿¬°á");
+		// ì—°ê²° ë²„íŠ¼
+		connect = new JButton("ì—°ê²°");
 		connect.setBackground(Color.white);
 		connect.setFocusable(false);
 		connect.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -145,7 +143,7 @@ public class RobotClient extends JFrame
 	}
 
 	public void Alert(String alert_title, String alert_message) {
-		// alert ¸Ş¼Òµå
+		// alert ë©”ì†Œë“œ
 		dialog = new JDialog(this, alert_title, true);
 		JLabel lll = new JLabel(alert_message);
 		lll.setVerticalTextPosition(SwingConstants.CENTER);
@@ -158,74 +156,14 @@ public class RobotClient extends JFrame
 		dialog.show();
 	}
 
-	// ÀÌº¥Æ®
+	// ì´ë²¤íŠ¸
 	public void actionPerformed(ActionEvent e) {
 		String command = e.getActionCommand();
-		Thread t;
+		Thread t, rt;
 		if (command.equals("connect")) {
 			t = new Thread(new sendScreen());
 			t.start();
 		}
-	}
-
-	@Override
-	public void valueChanged(ListSelectionEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void run() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseClicked(MouseEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyTyped(KeyEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyPressed(KeyEvent e) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyReleased(KeyEvent e) {
-		// TODO Auto-generated method stub
-
 	}
 
 	class P2p_server extends Thread {
@@ -314,9 +252,26 @@ public class RobotClient extends JFrame
 
 	}
 
-	class sendScreen extends JFrame implements Runnable, MouseListener {
+	class RemoteScreen {
+		Robot r;
+
+		public RemoteScreen() {
+			try {
+				r = new Robot();
+				while (true) {
+
+				}
+			} catch (AWTException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	class sendScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener {
 		public sendScreen() {
-			super("È­¸é °øÀ¯");
+			super("í™”ë©´ ê³µìœ ");
+			addMouseListener(this);
+			addMouseMotionListener(this);
 			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 			setVisible(true);
 		}
@@ -345,7 +300,7 @@ public class RobotClient extends JFrame
 			try {
 				robot = new Robot();
 				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-				bufImage = robot.createScreenCapture(area); // Robot Å¬·¡½º¸¦ ÀÌ¿ëÇÏ¿© ½ºÅ©¸° Ä¸ÃÄ.
+				bufImage = robot.createScreenCapture(area); // Robot í´ë˜ìŠ¤ë¥¼ ì´ìš©í•˜ì—¬ ìŠ¤í¬ë¦° ìº¡ì³.
 				// Graphics2D g2d = bufImage.createGraphics();
 				int w = this.getWidth();
 				int h = this.getHeight();
@@ -371,37 +326,53 @@ public class RobotClient extends JFrame
 			}
 		}
 
-		@Override
 		public void mouseClicked(MouseEvent e) {
-			System.out.println("X : " + e.getX() + " Y : " + e.getY());
+			out.println("#click#" + e.getX() + ":" + e.getY());
 		}
 
-		@Override
 		public void mousePressed(MouseEvent e) {
-			// TODO Auto-generated method stub
-
+			out.println("#press#" + e.getX() + ":" + e.getY());
 		}
 
-		@Override
 		public void mouseReleased(MouseEvent e) {
-			// TODO Auto-generated method stub
-
+			out.println("#release#" + e.getX() + ":" + e.getY());
 		}
 
-		@Override
 		public void mouseEntered(MouseEvent e) {
-			// TODO Auto-generated method stub
 
 		}
 
-		@Override
 		public void mouseExited(MouseEvent e) {
-			// TODO Auto-generated method stub
+		}
 
+		public void mouseDragged(MouseEvent e) {
+			out.println("#drag#" + e.getX() + ":" + e.getY());
+		}
+
+		public void mouseMoved(MouseEvent e) {
+			out.println("#move#" + e.getX() + ":" + e.getY());
 		}
 	}
 
 	public static void main(String[] args) {
-		new RobotClient();
+		RobotClient rc = new RobotClient();
+		rc.run();
+	}
+
+	public void run() {
+		String in_msg;
+		try {
+			while (true) {
+				in_msg = in.readLine();
+				System.out.println("ë„˜ì–´ì˜¨ ë©”ì‹œì§€" + in_msg);
+				// ë³´í†µ #c#ì´ ë„˜ì–´ì˜¤ë‹¤ê°€ ê²€ìƒ‰í•˜ë©´ #s#sdfsdfwef ì´ ë„˜ì–´ì˜´
+				// System.out.println(in_msg)
+				if (in_msg == null) {
+					System.out.println("dddsdsdsd");
+				}
+			}
+		} catch (Exception e) {
+
+		}
 	}
 }
