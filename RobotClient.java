@@ -34,6 +34,9 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
@@ -45,9 +48,9 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	String host_address = "127.0.0.1";
 	String s_local_address;
 	// server와 통신할 port번호
-	int port_to_host_number = 12156;
+	int port_to_host_number = 2222;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 12166;
+	int p2p_port_number = 1003;
 	Vector v_client_address;
 
 	BufferedReader in = null;
@@ -70,6 +73,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	JSplitPane centerSplitPane; // 중앙 splitpane
 	JSplitPane mainSplitPane; // 메인화면 splitpane
 	JDialog dialog;
+
+	JMenuBar menubar;
+	JMenu menu;
+	JMenuItem server_ip;
 
 	public RobotClient() {
 		super("원격 연결");
@@ -142,6 +149,18 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		return mainSplitPane;
 	}
 
+	public void menuSet() {
+		menubar = new JMenuBar();
+		menu = new JMenu("설정");
+		server_ip = new JMenuItem("Server IP 설정");
+		server_ip.addActionListener(this);
+		server_ip.setActionCommand("server_ip");
+
+		menu.add(server_ip);
+
+		setJMenuBar(menubar);
+	}
+
 	public void Alert(String alert_title, String alert_message) {
 		// alert 메소드
 		dialog = new JDialog(this, alert_title, true);
@@ -165,6 +184,27 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 			t.start();
 		}
 	}
+
+	public void run() {
+		String in_msg = null;
+		System.out.println("run");
+
+		try {
+			while (true) {
+				in_msg = in.readLine();
+				System.out.println("넘어온 메시지" + in_msg);
+				// 보통 #c#이 넘어오다가 검색하면 #s#sdfsdfwef 이 넘어옴
+				// System.out.println(in_msg)
+				if (in_msg != null) {
+
+				} else {
+					break;
+				}
+			} // while
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}// run
 
 	class P2p_server extends Thread {
 		ServerSocket p2p_server_socket;
@@ -268,8 +308,11 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	}
 
 	class sendScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener {
+		boolean onScreen = false;
+
 		public sendScreen() {
 			super("화면 공유");
+			onScreen = true;
 			addMouseListener(this);
 			addMouseMotionListener(this);
 			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -278,16 +321,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 		public void run() {
 			try {
-				while (shareTime != 0) {
+				while (onScreen) {
 					Thread.sleep(10);
 					setSize(this.getWidth(), this.getHeight());
 					capture();
-					shareTime--;
-					System.out.println(shareTime);
-					if (shareTime == 0) {
-						shareTime = 1000;
-						break;
-					}
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -357,22 +394,5 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	public static void main(String[] args) {
 		RobotClient rc = new RobotClient();
 		rc.run();
-	}
-
-	public void run() {
-		String in_msg;
-		try {
-			while (true) {
-				in_msg = in.readLine();
-				System.out.println("넘어온 메시지" + in_msg);
-				// 보통 #c#이 넘어오다가 검색하면 #s#sdfsdfwef 이 넘어옴
-				// System.out.println(in_msg)
-				if (in_msg == null) {
-					System.out.println("dddsdsdsd");
-				}
-			}
-		} catch (Exception e) {
-
-		}
 	}
 }
