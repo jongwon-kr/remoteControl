@@ -13,6 +13,7 @@ import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -43,6 +44,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 public class RobotClient extends JFrame implements ActionListener, Runnable {
+	Robot r;
 	ServerSocket server_socket;
 	Socket socket_to_host;
 	String host_address = "127.0.0.1";
@@ -84,6 +86,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		getContentPane().add(setUI()).setBackground(Color.white);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setSize(484, 363);
+		menuSet();
 		setVisible(true);
 	}
 
@@ -196,7 +199,17 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 				// 보통 #c#이 넘어오다가 검색하면 #s#sdfsdfwef 이 넘어옴
 				// System.out.println(in_msg)
 				if (in_msg != null) {
-
+					if (in_msg.startsWith("#press#")) {
+						r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+					} else if (in_msg.startsWith("#release#")) {
+						r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+					} else if (in_msg.startsWith("#drag#")) {
+						r.mouseMove(Integer.valueOf(in_msg.substring(6).split(":")[0]),
+								Integer.valueOf(in_msg.substring(6).split(":")[1]));
+					} else if (in_msg.startsWith("#move#")) {
+						r.mouseMove(Integer.valueOf(in_msg.substring(6).split(":")[0]),
+								Integer.valueOf(in_msg.substring(6).split(":")[1]));
+					}
 				} else {
 					break;
 				}
@@ -364,11 +377,11 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		}
 
 		public void mouseClicked(MouseEvent e) {
-			out.println("#click#" + e.getX() + ":" + e.getY());
 		}
 
 		public void mousePressed(MouseEvent e) {
 			out.println("#press#" + e.getX() + ":" + e.getY());
+			// 마우스 버튼 클릭
 		}
 
 		public void mouseReleased(MouseEvent e) {
@@ -384,10 +397,12 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 		public void mouseDragged(MouseEvent e) {
 			out.println("#drag#" + e.getX() + ":" + e.getY());
+
 		}
 
 		public void mouseMoved(MouseEvent e) {
 			out.println("#move#" + e.getX() + ":" + e.getY());
+			// move
 		}
 	}
 
