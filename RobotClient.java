@@ -52,13 +52,16 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 1003;
+	int p2p_port_number = 1006;
+	// 공유 키
+	int shareKey = 0;
+	boolean connectCheck = false;
 	Vector v_client_address;
 
 	BufferedReader in = null;
 	static PrintWriter out;
 	Thread t_connection;
-	String pathname;
+	String pathname, connectKey;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
@@ -68,6 +71,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	int shareTime = 600;
 	JPanel top_panel; // 상단 패널
 	JButton connect; // 연결 버튼
+	JButton makeShareKey; // 공유키 생성
 	JTextField conTf; // 연결 textfield
 
 	JPanel centerLeft_panel; // 중앙 패널
@@ -143,10 +147,20 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		connect.setActionCommand("connect");
 		connect.addActionListener(this);
 
+		// 공유키 생성 버튼
+		makeShareKey = new JButton("공유키 생성");
+		makeShareKey.setBackground(Color.white);
+		makeShareKey.setFocusable(false);
+		makeShareKey.setFont(new Font("Dialog", Font.BOLD, 12));
+		makeShareKey.setPreferredSize(new Dimension(120, 30));
+		makeShareKey.setActionCommand("makeShareKey");
+		makeShareKey.addActionListener(this);
+
 		centerLeft_panel.setPreferredSize(new Dimension(100, 300));
 		top_panel.setLayout(new FlowLayout(FlowLayout.LEFT));
 		top_panel.add(conTf);
 		top_panel.add(connect);
+		top_panel.add(makeShareKey);
 		centerSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, centerLeft_panel, centerRight_panel);
 		mainSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, top_panel, centerSplitPane);
 		return mainSplitPane;
@@ -158,9 +172,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		server_ip = new JMenuItem("Server IP 설정");
 		server_ip.addActionListener(this);
 		server_ip.setActionCommand("server_ip");
-
 		menu.add(server_ip);
-
 		setJMenuBar(menubar);
 	}
 
@@ -183,8 +195,25 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		String command = e.getActionCommand();
 		Thread t, rt;
 		if (command.equals("connect")) {
-			t = new Thread(new sendScreen());
-			t.start();
+			connectKey = conTf.getText();
+			out.println("#connect#" + connectKey);
+			System.out.println(connectKey);
+			r.delay(2000);
+			if (connectCheck) {
+				Alert("접속 성공", "접속에 성공했습니다.");
+				t = new Thread(new sendScreen());
+				t.start();
+			} else {
+				Alert("접속 실패", "원격접속에 실패했습니다.");
+			}
+		} else if (command.equals("makeShareKey")) {
+			shareKey = (int) (Math.random() * 100000);
+			System.out.println(shareKey);
+			makeShareKey.setVisible(false);
+			connect.setVisible(false);
+			conTf.setText("공유키 : " + shareKey);
+			conTf.disable();
+			Alert("공유", "공유키 : " + String.valueOf(shareKey));
 		}
 	}
 
@@ -193,22 +222,30 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		System.out.println("run");
 
 		try {
+			r = new Robot();
 			while (true) {
 				in_msg = in.readLine();
 				System.out.println("넘어온 메시지" + in_msg);
 				// 보통 #c#이 넘어오다가 검색하면 #s#sdfsdfwef 이 넘어옴
 				// System.out.println(in_msg)
 				if (in_msg != null) {
-					if (in_msg.startsWith("#press#")) {
+					if (in_msg.startsWith("#connect#")) {
+						out.println("#shareKey#" + shareKey);
+					}
+					if (in_msg.startsWith("#press#") && in_msg.startsWith(String.valueOf(shareKey))) {
 						r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-					} else if (in_msg.startsWith("#release#")) {
+					} else if (in_msg.startsWith("#release#") && in_msg.startsWith(String.valueOf(shareKey))) {
 						r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-					} else if (in_msg.startsWith("#drag#")) {
+					} else if (in_msg.startsWith("#drag#") && in_msg.startsWith(String.valueOf(shareKey))) {
 						r.mouseMove(Integer.valueOf(in_msg.substring(6).split(":")[0]),
 								Integer.valueOf(in_msg.substring(6).split(":")[1]));
-					} else if (in_msg.startsWith("#move#")) {
+					} else if (in_msg.startsWith("#move#") && in_msg.startsWith(String.valueOf(shareKey))) {
 						r.mouseMove(Integer.valueOf(in_msg.substring(6).split(":")[0]),
 								Integer.valueOf(in_msg.substring(6).split(":")[1]));
+					} else if (in_msg.startsWith("#shareKey#")) {
+						if (connectKey.equals(in_msg.substring(10))) {
+							connectCheck = true;
+						}
 					}
 				} else {
 					break;
