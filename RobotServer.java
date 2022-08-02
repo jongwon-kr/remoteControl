@@ -1,5 +1,8 @@
 package remoteConnect;
 
+import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -9,6 +12,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
 public class RobotServer extends JFrame {
@@ -90,12 +94,17 @@ public class RobotServer extends JFrame {
 		// client에게 메시지를 보내기위해
 		PrintWriter out;
 
+		// 화면 전송을 위한 bufferedInputStream, outputStream
+		BufferedInputStream bin;
+		BufferedOutputStream bout;
+
 		// Connection 생성자
 		public Connection(Socket s, RobotServer j) {
 			socket = s;
 			robot_server = j;
 
 			try {
+
 				// inputStream 생성
 				in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -108,6 +117,7 @@ public class RobotServer extends JFrame {
 
 		public void run() {
 			String msg = "";
+			BufferedImage image;
 			// client로부터 메시지가 들어오기를 계속 대기
 			while (true) {
 				try {
@@ -124,6 +134,10 @@ public class RobotServer extends JFrame {
 						} else if (msg.startsWith("#drag#")) {
 							message(msg);
 						} else if (msg.startsWith("#move#")) {
+							message(msg);
+						} else if (msg.startsWith("#connect#")) {
+							message(msg);
+						} else if (msg.startsWith("#shareKey#")) {
 							message(msg);
 						}
 					} else {
