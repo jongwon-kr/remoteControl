@@ -94,10 +94,6 @@ public class RobotServer extends JFrame {
 		// client에게 메시지를 보내기위해
 		PrintWriter out;
 
-		// 화면 전송을 위한 bufferedInputStream, outputStream
-		BufferedInputStream bin;
-		BufferedOutputStream bout;
-
 		// Connection 생성자
 		public Connection(Socket s, RobotServer j) {
 			socket = s;
@@ -113,17 +109,17 @@ public class RobotServer extends JFrame {
 			} catch (Exception e) {
 
 			}
+			ReceiveScreen rs = new ReceiveScreen(s, j);
+			rs.run();
 		}
 
 		public void run() {
 			String msg = "";
-			BufferedImage image;
 			// client로부터 메시지가 들어오기를 계속 대기
 			while (true) {
 				try {
 					// client로부터 메시지 한 줄 받기
 					msg = in.readLine();
-					System.out.println(msg);
 					if (msg != null) { // 메시지가 null이 아닌 경우
 						if (msg.startsWith("#click#")) {
 							message(msg);
@@ -138,6 +134,8 @@ public class RobotServer extends JFrame {
 						} else if (msg.startsWith("#connect#")) {
 							message(msg);
 						} else if (msg.startsWith("#shareKey#")) {
+							message(msg);
+						} else if (msg.startsWith("#share#")) {
 							message(msg);
 						}
 					} else {
@@ -169,6 +167,50 @@ public class RobotServer extends JFrame {
 			} // try-catch
 		}
 	} // end Connection Class
+
+	class ReceiveScreen implements Runnable {
+		// client와 통신을 위해 만들어진 socket 이것에서 io를 뽑아낸다.
+		Socket socket;
+		// P2pServer의 class의 메서드를 사용하기 위해
+		RobotServer robot_server;
+
+		// 화면 전송을 위한 bufferedInputStream, outputStream
+		BufferedInputStream bin;
+		BufferedOutputStream bout;
+
+		public ReceiveScreen(Socket socket, RobotServer server) {
+			socket = socket;
+			robot_server = server;
+
+			try {
+
+				// inputStream 생성
+				bin = new BufferedInputStream(socket.getInputStream());
+
+				// outputStream 생성
+				bout = new BufferedOutputStream(socket.getOutputStream());
+			} catch (Exception e) {
+
+			}
+		}
+
+		public void run() {
+			BufferedImage image = null;
+			while (true) {
+				try {
+					image = ImageIO.read(ImageIO.createImageInputStream(bin));
+					// client로부터 메시지 한 줄 받기
+					if (image != null) { // 메시지가 null이 아닌 경우
+						ImageIO.write(image, "screen", bout);
+					} else {
+						break;
+					}
+				} catch (Exception e) {
+				} // try-catch
+			} // while
+		}
+
+	}
 
 	class Check_client extends TimerTask { // TimerTask에서 상속 받으면 run()메서드 override해야됨
 		public void run() {

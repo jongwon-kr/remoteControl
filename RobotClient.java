@@ -54,7 +54,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 1006;
+	int p2p_port_number = 1024;
 	// 공유 키
 	int shareKey = 0;
 	boolean connectCheck = false;
@@ -205,6 +205,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		String command = e.getActionCommand();
 		Thread t, rt;
 		if (command.equals("connect")) {
+			out.println("SDfasdfasdf");
 			connectKey = conTf.getText();
 			out.println("#connect#" + connectKey);
 			try {
@@ -221,13 +222,14 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 			}
 			if (connectCheck) {
 				Alert("접속 성공", "접속에 성공했습니다.");
+				out.println("#share#");
 				t = new Thread(new receiveScreen());
 				t.start();
-				out.println("#share#");
 			} else {
 				Alert("접속 실패", "원격접속에 실패했습니다.");
 			}
 		} else if (command.equals("makeShareKey")) {
+			out.println("공유키가 생성되었습니다.");
 			shareKey = (int) (Math.random() * 100000);
 			System.out.println(shareKey);
 			makeShareKey.setVisible(false);
@@ -240,6 +242,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 	public void run() {
 		String in_msg = null;
+		Thread st;
 		System.out.println("run");
 		try {
 			r = new Robot();
@@ -269,6 +272,8 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 						}
 					} else if (in_msg.startsWith("#share#") && shareKey != 0) {
 						// 화면 공유 시작
+						st = new Thread(new sendScreen());
+						st.run();
 					}
 				} else {
 					break;
@@ -382,14 +387,24 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 	// 접속을 요청하는 컴퓨터에게 화면 전송
 	class sendScreen implements Runnable {
+		BufferedImage bufImage = null;
 
 		public void run() {
 
+			try {
+				while (true) {
+					Thread.sleep(500);
+					capture();
+					System.out.println(bufImage.getHeight());
+				}
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		public void capture() {
 			Robot robot;
-			BufferedImage bufImage = null;
 			try {
 				robot = new Robot();
 				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
@@ -405,6 +420,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	// 접속요청한 화면 받아오기
 	class receiveScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener {
 		boolean onScreen = false;
+		Socket socket;
 
 		public receiveScreen() {
 			super("접속화면");
@@ -417,32 +433,26 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 		public void run() {
 			try {
+				BufferedImage image;
 				while (onScreen) {
 					Thread.sleep(10);
-					setSize(this.getWidth(), this.getHeight());
-					capture();
+					image = ImageIO.read(ImageIO.createImageInputStream(bin));
+					if (image != null) { // image가 null이 아닌 경우
+						int w = this.getWidth();
+						int h = this.getHeight();
+						img = image.getScaledInstance(w, h, Image.SCALE_DEFAULT);
+						// this.repaint();
+						this.drawImage(img, w, h);
+					} else {
+						System.out.println("이미지 못받음");
+					}
 					if (!isVisible())
 						onScreen = false;
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-			}
-		}
-
-		public void capture() {
-			Robot robot;
-			BufferedImage bufImage = null;
-			try {
-				robot = new Robot();
-				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-				bufImage = robot.createScreenCapture(area); // Robot 클래스를 이용하여 스크린 캡쳐.
-				// Graphics2D g2d = bufImage.createGraphics();
-				int w = this.getWidth();
-				int h = this.getHeight();
-				img = bufImage.getScaledInstance(w, h, Image.SCALE_DEFAULT);
-				// this.repaint();
-				this.drawImage(img, w, h);
-			} catch (Exception e) {
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
