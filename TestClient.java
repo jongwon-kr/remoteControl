@@ -11,24 +11,24 @@ import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
-
-import remoteConnect.RobotClient.receiveScreen;
-import remoteConnect.RobotClient.sendScreen;
+import javax.swing.SwingConstants;
 
 public class TestClient extends JFrame implements ActionListener, Runnable {
 	Robot r;
@@ -36,37 +36,82 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 	Socket socket_to_host;
 	String host_address = "127.0.0.1";
 	String s_local_address;
-	// serverì™€ í†µì‹ í•  portë²ˆí˜¸
-	int port_to_host_numberServer = 55242;
-	// clientë¼ë¦¬ í†µì‹ í•  portë²ˆí˜¸
+	// server¿Í Åë½ÅÇÒ port¹øÈ£
+	int port_to_host_number = 4444;
 
-	ObjectInputStream ois = null;
+	ObjectInputStream ois;
 	static PrintWriter out;
 
 	Thread t_connection;
 	String connectKey;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	final int SCREEN_WIDTH = screenSize.width; // í™”ë©´ ê°€ë¡œ ë„ˆë¹„
-	final int SCREEN_HEIGHT = screenSize.height; // í™”ë©´ ì„¸ë¡œ ë„ˆë¹„
-	static Image img = null; // ìƒì„±ì. UI ë°°ì¹˜.
+	final int SCREEN_WIDTH = screenSize.width; // È­¸é °¡·Î ³Êºñ
+	final int SCREEN_HEIGHT = screenSize.height; // È­¸é ¼¼·Î ³Êºñ
+	static Image img = null; // »ı¼ºÀÚ. UI ¹èÄ¡.
 
-	JPanel top_panel; // ìƒë‹¨ íŒ¨ë„
-	JButton connect; // ì—°ê²° ë²„íŠ¼
-	JButton makeShareKey; // ê³µìœ í‚¤ ìƒì„±
-	JTextField conTf; // ì—°ê²° textfield
+	JPanel top_panel; // »ó´Ü ÆĞ³Î
+	JButton connect; // ¿¬°á ¹öÆ°
+	JButton makeShareKey; // °øÀ¯Å° »ı¼º
+	JTextField conTf; // ¿¬°á textfield
 
-	JPanel centerLeft_panel; // ì¤‘ì•™ íŒ¨ë„
+	JPanel centerLeft_panel; // Áß¾Ó ÆĞ³Î
 	JPanel centerRight_panel;
-	JSplitPane centerSplitPane; // ì¤‘ì•™ splitpane
-	JSplitPane mainSplitPane; // ë©”ì¸í™”ë©´ splitpane
+	JSplitPane centerSplitPane; // Áß¾Ó splitpane
+	JSplitPane mainSplitPane; // ¸ŞÀÎÈ­¸é splitpane
 	JDialog dialog;
 
 	JMenuBar menubar;
 	JMenu menu;
 	JMenuItem server_ip;
 
-	// Mainí™”ë©´ UIì„¤ì •
+	boolean connectCheck = false;
+
+	public TestClient() {
+		super("¿ø°İ ¿¬°á");
+		ConnectCreation();
+		getContentPane().add(setUI()).setBackground(Color.white);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setSize(484, 363);
+		setVisible(true);
+	}
+
+	public int ConnectCreation() {
+		try {
+			socket_to_host = new Socket(host_address, port_to_host_number);
+
+			out = new PrintWriter(socket_to_host.getOutputStream());
+			ois = new ObjectInputStream(socket_to_host.getInputStream());
+
+			t_connection = new Thread(this);
+			t_connection.start();
+		} catch (UnknownHostException e) {
+			Alert("°æ°í", "¾Ë¼ö¾ø´Â È£½ºÆ®ÀÔ´Ï´Ù.");
+			return 0;
+		} catch (IOException e) {
+			e.printStackTrace();
+			Alert("°æ°í", "¿¬°á¿¡ ½ÇÆĞÇÏ¿´½À´Ï´Ù.");
+			return 0;
+		} // try-catch
+		connectCheck = true;
+		return 1;
+	}
+
+	public void Alert(String alert_title, String alert_message) {
+		// alert ¸Ş¼Òµå
+		dialog = new JDialog(this, alert_title, true);
+		JLabel lll = new JLabel(alert_message);
+		lll.setVerticalTextPosition(SwingConstants.CENTER);
+		lll.setHorizontalTextPosition(SwingConstants.CENTER);
+		JPanel ttt = new JPanel();
+		ttt.add(lll);
+		dialog.setLocation(180, 80);
+		dialog.setSize(320, 100);
+		dialog.setContentPane(ttt);
+		dialog.show();
+	}
+
+	// MainÈ­¸é UI¼³Á¤
 	public Component setUI() {
 		top_panel = new JPanel(new FlowLayout());
 		centerLeft_panel = new JPanel();
@@ -75,8 +120,8 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		conTf = new JTextField();
 		conTf.setPreferredSize(new Dimension(100, 30));
 
-		// ì—°ê²° ë²„íŠ¼
-		connect = new JButton("ì—°ê²°");
+		// ¿¬°á ¹öÆ°
+		connect = new JButton("¿¬°á");
 		connect.setBackground(Color.white);
 		connect.setFocusable(false);
 		connect.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -84,8 +129,8 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		connect.setActionCommand("connect");
 		connect.addActionListener(this);
 
-		// ê³µìœ í‚¤ ìƒì„± ë²„íŠ¼
-		makeShareKey = new JButton("ê³µìœ í‚¤ ìƒì„±");
+		// °øÀ¯Å° »ı¼º ¹öÆ°
+		makeShareKey = new JButton("°øÀ¯Å° »ı¼º");
 		makeShareKey.setBackground(Color.white);
 		makeShareKey.setFocusable(false);
 		makeShareKey.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -103,7 +148,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		return mainSplitPane;
 	}
 
-	// ì´ë¯¸ì§€ ê·¸ë¦¬ê¸°
+	// ÀÌ¹ÌÁö ±×¸®±â
 	public void drawImage(Image img, int x, int y) {
 		Graphics g = this.getGraphics();
 		g.drawImage(img, 0, 0, x, y, this);
@@ -118,45 +163,88 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 	}
 
 	public void run() {
-
 		try {
+			while (true) {
+				img = (Image) ois.readObject();
+				if (img != null) {
+					int w = this.getWidth();
+					int h = this.getHeight();
+					img = (Image) img.getScaledInstance(w, h, Image.SCALE_DEFAULT);
+					drawImage(img, w, h);
+				} else {
+					break;
+				}
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}// run
 
-	public static void main(String[] args) {
+	// Á¢¼Ó¿äÃ»ÇÑ È­¸é ¹Ş¾Æ¿À±â
+	class ReceiveScreen extends JFrame implements Runnable {
+		boolean onScreen = false;
 
+		public ReceiveScreen() {
+			super("Á¢¼ÓÈ­¸é");
+			onScreen = true;
+			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+			setVisible(true);
+		}
+
+		public void run() {
+			Image image = null;
+			try {
+				while (onScreen) {
+					Thread.sleep(10);
+					out.println("#share#");
+					image = img;
+					if (image != null) { // image°¡ nullÀÌ ¾Æ´Ñ °æ¿ì
+						int w = this.getWidth();
+						int h = this.getHeight();
+						img = (Image) image.getScaledInstance(w, h, Image.SCALE_DEFAULT);
+						// this.repaint();
+						this.drawImage(img, w, h);
+					} else {
+						out.println("#share#");
+						System.out.println("ÀÌ¹ÌÁö ¸ø¹ŞÀ½");
+					}
+					if (!isVisible())
+						onScreen = false;
+				}
+			} catch (Exception e) {
+
+			}
+		}
+
+		public void drawImage(Image img, int x, int y) {
+			Graphics g = this.getGraphics();
+			g.drawImage(img, 0, 0, x, y, this);
+			this.paint(g);
+			this.repaint();
+		}
+
+		public void paint(Graphics g) {
+			if (RobotClient.img != null) {
+				g.drawImage(RobotClient.img, 0, 0, RobotClient.img.getWidth(this), RobotClient.img.getHeight(this),
+						this);
+			}
+		}
 	}
 
 	public void actionPerformed(ActionEvent e) {
 		String command = e.getActionCommand();
-		Thread t, rt;
+
 		if (command.equals("connect")) {
-			out.println("SDfasdfasdf");
-			connectKey = conTf.getText();
-			out.println("#connect#" + connectKey);
-			try {
-				int cnt = 0;
-				while (!connectCheck) {
-					Thread.sleep(1000);
-					System.out.println("ì„œë²„ì— ì ‘ì†ì¤‘ì…ë‹ˆë‹¤.");
-					cnt++;
-					if (cnt == 6)
-						break;
-				}
-			} catch (InterruptedException e1) {
-				e1.printStackTrace();
-			}
-			if (connectCheck) {
-				Alert("ì ‘ì† ì„±ê³µ", "ì ‘ì†ì— ì„±ê³µí–ˆìŠµë‹ˆë‹¤.");
-				out.println("#share#");
-				t = new Thread(new receiveScreen());
-				t.start();
-			} else {
-				Alert("ì ‘ì† ì‹¤íŒ¨", "ì›ê²©ì ‘ì†ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.");
-			}
+			Thread t = new Thread(new ReceiveScreen());
+			t.start();
+		} else {
+			Alert("Á¢¼Ó ½ÇÆĞ", "¿ø°İÁ¢¼Ó¿¡ ½ÇÆĞÇß½À´Ï´Ù.");
 		}
+	}
+
+	public static void main(String[] args) {
+		TestClient tc = new TestClient();
+		tc.run();
 	}
 
 }

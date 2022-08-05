@@ -1,5 +1,8 @@
 package remoteConnect;
 
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Robot;
@@ -15,23 +18,31 @@ import java.util.Vector;
 
 import javax.swing.JFrame;
 
-public class TestServer extends JFrame implements Runnable {
-	final int server_port_number = 55242; // 서버 포트 넘버
+import remoteConnect.RobotServer.Connection;
+
+public class TestServer {
+
+	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
+	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
+	final int server_port_number = 4444; // 서버 포트 넘버
 	Socket socket; // socket
 	ServerSocket server_socket; // server socket
 	Vector v_client_list; // 클라이언트 관리 리스트
-	Image img = null; // 전송하는 화면
+	static Image img = null; // 전송하는 화면
 
 	public TestServer() {
 		// 클라이언트 수
+		v_client_list = new Vector();
+
+		// client가 network 상태인지 확인하기 위해 일정 간격으로 신호를 보내기 위한 timer 생성
+		Timer timer = new Timer();
+
+		// 2초마다 Check_client 객체 생성
+		timer.schedule(new Check_client(), 0, 2 * 1000);
 		try {
-			v_client_list = new Vector();
-
-			// client가 network 상태인지 확인하기 위해 일정 간격으로 신호를 보내기 위한 timer 생성
-			Timer timer = new Timer();
-
-			// 2초마다 Check_client 객체 생성
-			timer.schedule(new Check_client(), 0, 2 * 1000);
+			// 포트번호 12167에 SocketServer생성
+			server_socket = new ServerSocket(server_port_number);
 			while (true) {
 				try {
 					socket = server_socket.accept();
@@ -105,17 +116,23 @@ public class TestServer extends JFrame implements Runnable {
 
 		public void run() {
 			String msg = "";
+			// client로부터 메시지가 들어오기를 계속 대기
 			while (true) {
 				try {
+					// client로부터 메시지 한 줄 받기
 					msg = in.readLine();
 					if (msg != null) {
 						if (msg.startsWith("#share#")) {
-							Thread.sleep(30);
 							capture();
 							if (img != null) {
 								oos.writeObject(img);
+								System.out.println("보냄");
+							} else {
+								System.out.println("못보냄");
 							}
 						}
+					} else {
+						System.out.println("no msg");
 					}
 				} catch (Exception e) {
 
@@ -137,6 +154,7 @@ public class TestServer extends JFrame implements Runnable {
 
 	class Check_client extends TimerTask { // TimerTask에서 상속 받으면 run()메서드 override해야됨
 		public void run() {
+			Image img = null;
 			int client_size = v_client_list.size();
 
 			System.out.println("*****************************");
@@ -149,16 +167,27 @@ public class TestServer extends JFrame implements Runnable {
 			System.out.println();
 			System.out.println();
 			System.out.println();
+			for (int i = 0; i < client_size; i++) {
+				try {
+					capture();
+					img = TestServer.img;
+					if (img != null) {
+						System.out.println("이미지 있음");
+					} else {
+						System.out.println("이미지 없음");
+					}
+					((Connection) v_client_list.elementAt(i)).oos.writeObject(img);
+				} catch (Exception e) {
+					v_client_list.removeElementAt(i);
+					// 통신이 되지 않을 경우 목록에서 삭제
+				} // try-catch
+			} // for
 		} // run
-	} // Check_client Class
 
-	// run
-	public void run() {
-	}
+	} // Check_client Class
 
 	// Main
 	public static void main(String[] args) {
-		TestServer ts = new TestServer();
-		ts.run();
+		new TestServer();
 	}
 }
