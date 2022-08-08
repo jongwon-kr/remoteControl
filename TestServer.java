@@ -26,8 +26,9 @@ public class TestServer {
 	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
 	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
 	final int server_port_number = 4444; // 서버 포트 넘버
-	Socket socket; // socket
-	ServerSocket server_socket; // server socket
+	final int server_port_number2 = 5555;
+	Socket socket, socket2; // socket
+	ServerSocket server_socket, server_socket2; // server socket
 	Vector v_client_list; // 클라이언트 관리 리스트
 	static Image img = null; // 전송하는 화면
 
@@ -43,10 +44,12 @@ public class TestServer {
 		try {
 			// 포트번호 12167에 SocketServer생성
 			server_socket = new ServerSocket(server_port_number);
+			server_socket2 = new ServerSocket(server_port_number2);
 			while (true) {
 				try {
 					socket = server_socket.accept();
-					Connection c = new Connection(socket, this);
+					socket2 = server_socket2.accept();
+					Connection c = new Connection(socket, socket2, this);
 					addClient(c);
 					// Connection class 가 가지고 있는 run메서드를 실행시켜 client와의 통신을 유지
 					c.start();
@@ -87,7 +90,7 @@ public class TestServer {
 
 	class Connection extends Thread {
 		// client와 통신을 위해 만들어진 socket 이것에서 io를 뽑아낸다.
-		Socket socket;
+		Socket socket, socket2;
 		// P2pServer의 class의 메서드를 사용하기 위해
 		TestServer robot_server;
 
@@ -98,8 +101,9 @@ public class TestServer {
 		ObjectOutputStream oos; // 화면 전송 스트림
 
 		// Connection 생성자
-		public Connection(Socket s, TestServer t) {
+		public Connection(Socket s, Socket s2, TestServer t) {
 			this.socket = s;
+			this.socket2 = s2;
 			this.robot_server = t;
 
 			try {
@@ -108,7 +112,7 @@ public class TestServer {
 				in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 				// outputStream 생성
-				oos = new ObjectOutputStream(socket.getOutputStream());
+				oos = new ObjectOutputStream(socket2.getOutputStream());
 			} catch (Exception e) {
 
 			}

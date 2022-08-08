@@ -33,12 +33,12 @@ import javax.swing.SwingConstants;
 public class TestClient extends JFrame implements ActionListener, Runnable {
 	Robot r;
 	ServerSocket server_socket;
-	Socket socket_to_host;
+	Socket socket_to_host, socket_to_host2;
 	String host_address = "127.0.0.1";
 	String s_local_address;
-	// server¿Í Åë½ÅÇÒ port¹øÈ£
+	// serverì™€ í†µì‹ í•  portë²ˆí˜¸
 	int port_to_host_number = 4444;
-
+	int port_to_host_number2 = 5555;
 	ObjectInputStream ois;
 	static PrintWriter out;
 
@@ -46,19 +46,19 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 	String connectKey;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	final int SCREEN_WIDTH = screenSize.width; // È­¸é °¡·Î ³Êºñ
-	final int SCREEN_HEIGHT = screenSize.height; // È­¸é ¼¼·Î ³Êºñ
-	static Image img = null; // »ı¼ºÀÚ. UI ¹èÄ¡.
+	final int SCREEN_WIDTH = screenSize.width; // í™”ë©´ ê°€ë¡œ ë„ˆë¹„
+	final int SCREEN_HEIGHT = screenSize.height; // í™”ë©´ ì„¸ë¡œ ë„ˆë¹„
+	static Image img = null;
 
-	JPanel top_panel; // »ó´Ü ÆĞ³Î
-	JButton connect; // ¿¬°á ¹öÆ°
-	JButton makeShareKey; // °øÀ¯Å° »ı¼º
-	JTextField conTf; // ¿¬°á textfield
+	JPanel top_panel; // ìƒë‹¨ íŒ¨ë„
+	JButton connect; // ì—°ê²° ë²„íŠ¼
+	JButton makeShareKey; // ê³µìœ í‚¤ ìƒì„±
+	JTextField conTf; // ì—°ê²° textfield
 
-	JPanel centerLeft_panel; // Áß¾Ó ÆĞ³Î
+	JPanel centerLeft_panel; // ì¤‘ì•™ íŒ¨ë„
 	JPanel centerRight_panel;
-	JSplitPane centerSplitPane; // Áß¾Ó splitpane
-	JSplitPane mainSplitPane; // ¸ŞÀÎÈ­¸é splitpane
+	JSplitPane centerSplitPane; // ì¤‘ì•™ splitpane
+	JSplitPane mainSplitPane; // ë©”ì¸í™”ë©´ splitpane
 	JDialog dialog;
 
 	JMenuBar menubar;
@@ -68,7 +68,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 	boolean connectCheck = false;
 
 	public TestClient() {
-		super("¿ø°İ ¿¬°á");
+		super("ì›ê²© ì—°ê²°");
 		ConnectCreation();
 		getContentPane().add(setUI()).setBackground(Color.white);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -79,18 +79,19 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 	public int ConnectCreation() {
 		try {
 			socket_to_host = new Socket(host_address, port_to_host_number);
+			socket_to_host2 = new Socket(host_address, port_to_host_number2);
 
 			out = new PrintWriter(socket_to_host.getOutputStream());
-			ois = new ObjectInputStream(socket_to_host.getInputStream());
+			ois = new ObjectInputStream(socket_to_host2.getInputStream());
 
 			t_connection = new Thread(this);
 			t_connection.start();
 		} catch (UnknownHostException e) {
-			Alert("°æ°í", "¾Ë¼ö¾ø´Â È£½ºÆ®ÀÔ´Ï´Ù.");
+			Alert("ê²½ê³ ", "ì•Œìˆ˜ì—†ëŠ” í˜¸ìŠ¤íŠ¸ì…ë‹ˆë‹¤.");
 			return 0;
 		} catch (IOException e) {
 			e.printStackTrace();
-			Alert("°æ°í", "¿¬°á¿¡ ½ÇÆĞÇÏ¿´½À´Ï´Ù.");
+			Alert("ê²½ê³ ", "ì—°ê²°ì— ì‹¤íŒ¨í•˜ì˜€ìŠµë‹ˆë‹¤.");
 			return 0;
 		} // try-catch
 		connectCheck = true;
@@ -98,7 +99,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 	}
 
 	public void Alert(String alert_title, String alert_message) {
-		// alert ¸Ş¼Òµå
+		// alert ë©”ì†Œë“œ
 		dialog = new JDialog(this, alert_title, true);
 		JLabel lll = new JLabel(alert_message);
 		lll.setVerticalTextPosition(SwingConstants.CENTER);
@@ -111,7 +112,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		dialog.show();
 	}
 
-	// MainÈ­¸é UI¼³Á¤
+	// Mainí™”ë©´ UIì„¤ì •
 	public Component setUI() {
 		top_panel = new JPanel(new FlowLayout());
 		centerLeft_panel = new JPanel();
@@ -120,8 +121,8 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		conTf = new JTextField();
 		conTf.setPreferredSize(new Dimension(100, 30));
 
-		// ¿¬°á ¹öÆ°
-		connect = new JButton("¿¬°á");
+		// ì—°ê²° ë²„íŠ¼
+		connect = new JButton("ì—°ê²°");
 		connect.setBackground(Color.white);
 		connect.setFocusable(false);
 		connect.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -129,8 +130,8 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		connect.setActionCommand("connect");
 		connect.addActionListener(this);
 
-		// °øÀ¯Å° »ı¼º ¹öÆ°
-		makeShareKey = new JButton("°øÀ¯Å° »ı¼º");
+		// ê³µìœ í‚¤ ìƒì„± ë²„íŠ¼
+		makeShareKey = new JButton("ê³µìœ í‚¤ ìƒì„±");
 		makeShareKey.setBackground(Color.white);
 		makeShareKey.setFocusable(false);
 		makeShareKey.setFont(new Font("Dialog", Font.BOLD, 12));
@@ -148,7 +149,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		return mainSplitPane;
 	}
 
-	// ÀÌ¹ÌÁö ±×¸®±â
+	// ì´ë¯¸ì§€ ê·¸ë¦¬ê¸°
 	public void drawImage(Image img, int x, int y) {
 		Graphics g = this.getGraphics();
 		g.drawImage(img, 0, 0, x, y, this);
@@ -180,12 +181,12 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 		}
 	}// run
 
-	// Á¢¼Ó¿äÃ»ÇÑ È­¸é ¹Ş¾Æ¿À±â
+	// ì ‘ì†ìš”ì²­í•œ í™”ë©´ ë°›ì•„ì˜¤ê¸°
 	class ReceiveScreen extends JFrame implements Runnable {
 		boolean onScreen = false;
 
 		public ReceiveScreen() {
-			super("Á¢¼ÓÈ­¸é");
+			super("ì ‘ì†í™”ë©´");
 			onScreen = true;
 			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 			setVisible(true);
@@ -198,7 +199,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 					Thread.sleep(10);
 					out.println("#share#");
 					image = img;
-					if (image != null) { // image°¡ nullÀÌ ¾Æ´Ñ °æ¿ì
+					if (image != null) { // imageê°€ nullì´ ì•„ë‹Œ ê²½ìš°
 						int w = this.getWidth();
 						int h = this.getHeight();
 						img = (Image) image.getScaledInstance(w, h, Image.SCALE_DEFAULT);
@@ -206,7 +207,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 						this.drawImage(img, w, h);
 					} else {
 						out.println("#share#");
-						System.out.println("ÀÌ¹ÌÁö ¸ø¹ŞÀ½");
+						System.out.println("ì´ë¯¸ì§€ ëª»ë°›ìŒ");
 					}
 					if (!isVisible())
 						onScreen = false;
@@ -238,7 +239,7 @@ public class TestClient extends JFrame implements ActionListener, Runnable {
 			Thread t = new Thread(new ReceiveScreen());
 			t.start();
 		} else {
-			Alert("Á¢¼Ó ½ÇÆĞ", "¿ø°İÁ¢¼Ó¿¡ ½ÇÆĞÇß½À´Ï´Ù.");
+			Alert("ì ‘ì† ì‹¤íŒ¨", "ì›ê²©ì ‘ì†ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.");
 		}
 	}
 
