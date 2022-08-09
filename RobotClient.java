@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -54,7 +56,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 1024;
+	int p2p_port_number = 1038;
 	// 공유 키
 	int shareKey = 0;
 	boolean connectCheck = false;
@@ -109,11 +111,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 			in = new BufferedReader(new InputStreamReader(socket_to_host.getInputStream()));
 			out = new PrintWriter(socket_to_host.getOutputStream(), true);
-			bin = new BufferedInputStream(socket_to_host.getInputStream());
-			bout = new BufferedOutputStream(socket_to_host.getOutputStream());
 
-			t_connection = new Thread(this);
-			t_connection.start();
+			SendScreen sc = new SendScreen(socket_to_host);
+			sc.start();
+
 			P2p_server robot_server = new P2p_server(server_socket);
 			// p2p서버 클래스
 		} catch (UnknownHostException e) {
@@ -205,9 +206,8 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		String command = e.getActionCommand();
 		Thread t, rt;
 		if (command.equals("connect")) {
-			out.println("SDfasdfasdf");
 			connectKey = conTf.getText();
-			out.println("#connect#" + connectKey);
+			out.println("#sha#share#");
 			try {
 				int cnt = 0;
 				while (!connectCheck) {
@@ -223,7 +223,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 			if (connectCheck) {
 				Alert("접속 성공", "접속에 성공했습니다.");
 				out.println("#share#");
-				t = new Thread(new receiveScreen());
+				t = new Thread(new ReceiveScreen(socket_to_host));
 				t.start();
 			} else {
 				Alert("접속 실패", "원격접속에 실패했습니다.");
@@ -272,8 +272,6 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 						}
 					} else if (in_msg.startsWith("#share#") && shareKey != 0) {
 						// 화면 공유 시작
-						st = new Thread(new sendScreen());
-						st.run();
 					}
 				} else {
 					break;
@@ -386,16 +384,29 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	}
 
 	// 접속을 요청하는 컴퓨터에게 화면 전송
-	class sendScreen implements Runnable {
-		BufferedImage bufImage = null;
+	class SendScreen extends Thread {
+		Socket socket;
+		ObjectOutputStream oos;
+
+		public SendScreen(Socket s) {
+			this.socket = s;
+			try {
+				oos = new ObjectOutputStream(socket.getOutputStream());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 
 		public void run() {
 
 			try {
 				while (true) {
-					Thread.sleep(500);
-					capture();
-					System.out.println(bufImage.getHeight());
+					try {
+						Thread.sleep(10);
+						oos.writeObject(capture());
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				}
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
@@ -403,27 +414,36 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 			}
 		}
 
-		public void capture() {
+		public Image capture() {
 			Robot robot;
+			BufferedImage bufImage = null;
 			try {
 				robot = new Robot();
 				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
 				bufImage = robot.createScreenCapture(area); // Robot 클래스를 이용하여 스크린 캡쳐.
-				ImageIO.write(bufImage, "bmp", bout);
 				// this.repaint();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			return bufImage;
 		}
 	}
 
 	// 접속요청한 화면 받아오기
-	class receiveScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener {
+	class ReceiveScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener {
 		boolean onScreen = false;
 		Socket socket;
 
-		public receiveScreen() {
+		ObjectInputStream ois;
+
+		public ReceiveScreen(Socket s) {
 			super("접속화면");
+			this.socket = s;
+			try {
+				ois = new ObjectInputStream(socket.getInputStream());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			onScreen = true;
 			addMouseListener(this);
 			addMouseMotionListener(this);
@@ -433,10 +453,14 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 		public void run() {
 			try {
-				BufferedImage image;
+				BufferedImage image = null;
 				while (onScreen) {
 					Thread.sleep(10);
-					image = ImageIO.read(ImageIO.createImageInputStream(bin));
+					try {
+						image = (BufferedImage) ois.readObject();
+					} catch (ClassNotFoundException e) {
+						e.printStackTrace();
+					}
 					if (image != null) { // image가 null이 아닌 경우
 						int w = this.getWidth();
 						int h = this.getHeight();
@@ -472,6 +496,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		}
 
 		public void mouseClicked(MouseEvent e) {
+			// mouse Click
 		}
 
 		public void mousePressed(MouseEvent e) {
@@ -484,15 +509,15 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		}
 
 		public void mouseEntered(MouseEvent e) {
-
+			// mouse Enter
 		}
 
 		public void mouseExited(MouseEvent e) {
+			// mouse Exit
 		}
 
 		public void mouseDragged(MouseEvent e) {
 			out.println("#drag#" + e.getX() + ":" + e.getY());
-
 		}
 
 		public void mouseMoved(MouseEvent e) {

@@ -1,10 +1,12 @@
 package remoteConnect;
 
+import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -58,7 +60,6 @@ public class RobotServer extends JFrame {
 		// client 목록을 한 바퀴 돌면서 msg보냄
 		for (int i = 0; i < v_client_list.size(); i++) {
 			((Connection) v_client_list.elementAt(i)).sendMessage(msg);
-
 		}
 	}
 
@@ -109,8 +110,8 @@ public class RobotServer extends JFrame {
 			} catch (Exception e) {
 
 			}
-			ReceiveScreen rs = new ReceiveScreen(s, j);
-			rs.run();
+			ReceiveScreen rs = new ReceiveScreen(s);
+			rs.start();
 		}
 
 		public void run() {
@@ -120,6 +121,7 @@ public class RobotServer extends JFrame {
 				try {
 					// client로부터 메시지 한 줄 받기
 					msg = in.readLine();
+					System.out.println(msg);
 					if (msg != null) { // 메시지가 null이 아닌 경우
 						if (msg.startsWith("#click#")) {
 							message(msg);
@@ -168,40 +170,36 @@ public class RobotServer extends JFrame {
 		}
 	} // end Connection Class
 
-	class ReceiveScreen implements Runnable {
+	class ReceiveScreen extends Thread {
 		// client와 통신을 위해 만들어진 socket 이것에서 io를 뽑아낸다.
 		Socket socket;
-		// P2pServer의 class의 메서드를 사용하기 위해
-		RobotServer robot_server;
 
 		// 화면 전송을 위한 bufferedInputStream, outputStream
-		BufferedInputStream bin;
-		BufferedOutputStream bout;
+		ObjectInputStream ois;
+		ObjectOutputStream oos;
 
-		public ReceiveScreen(Socket socket, RobotServer server) {
+		public ReceiveScreen(Socket socket) {
 			socket = socket;
-			robot_server = server;
 
 			try {
 
 				// inputStream 생성
-				bin = new BufferedInputStream(socket.getInputStream());
+				ois = new ObjectInputStream(socket.getInputStream());
 
 				// outputStream 생성
-				bout = new BufferedOutputStream(socket.getOutputStream());
+				oos = new ObjectOutputStream(socket.getOutputStream());
 			} catch (Exception e) {
 
 			}
 		}
 
 		public void run() {
-			BufferedImage image = null;
+			Image image = null;
 			while (true) {
 				try {
-					image = ImageIO.read(ImageIO.createImageInputStream(bin));
-					// client로부터 메시지 한 줄 받기
+					image = (Image) ois.readObject();
 					if (image != null) { // 메시지가 null이 아닌 경우
-						ImageIO.write(image, "screen", bout);
+						oos.writeObject(image);
 					} else {
 						break;
 					}
@@ -209,7 +207,6 @@ public class RobotServer extends JFrame {
 				} // try-catch
 			} // while
 		}
-
 	}
 
 	class Check_client extends TimerTask { // TimerTask에서 상속 받으면 run()메서드 override해야됨

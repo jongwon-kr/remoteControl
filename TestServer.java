@@ -1,13 +1,13 @@
 package remoteConnect;
 
-import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -16,19 +16,17 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
-import remoteConnect.RobotServer.Connection;
-
-public class TestServer {
+public class TestServer extends JFrame {
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
 	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
-	final int server_port_number = 4444; // 서버 포트 넘버
-	final int server_port_number2 = 5555;
-	Socket socket, socket2; // socket
-	ServerSocket server_socket, server_socket2; // server socket
+	final int server_port_number = 11332; // 서버 포트 넘버
+	Socket socket; // socket
+	ServerSocket server_socket; // server socket
 	Vector v_client_list; // 클라이언트 관리 리스트
 	static Image img = null; // 전송하는 화면
 
@@ -44,12 +42,10 @@ public class TestServer {
 		try {
 			// 포트번호 12167에 SocketServer생성
 			server_socket = new ServerSocket(server_port_number);
-			server_socket2 = new ServerSocket(server_port_number2);
 			while (true) {
 				try {
 					socket = server_socket.accept();
-					socket2 = server_socket2.accept();
-					Connection c = new Connection(socket, socket2, this);
+					Connection c = new Connection(socket, this);
 					addClient(c);
 					// Connection class 가 가지고 있는 run메서드를 실행시켜 client와의 통신을 유지
 					c.start();
@@ -73,7 +69,6 @@ public class TestServer {
 			robot = new Robot();
 			Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
 			img = robot.createScreenCapture(area); // Robot 클래스를 이용하여 스크린 캡쳐.
-			// this.repaint();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -90,7 +85,7 @@ public class TestServer {
 
 	class Connection extends Thread {
 		// client와 통신을 위해 만들어진 socket 이것에서 io를 뽑아낸다.
-		Socket socket, socket2;
+		Socket socket;
 		// P2pServer의 class의 메서드를 사용하기 위해
 		TestServer robot_server;
 
@@ -101,9 +96,8 @@ public class TestServer {
 		ObjectOutputStream oos; // 화면 전송 스트림
 
 		// Connection 생성자
-		public Connection(Socket s, Socket s2, TestServer t) {
+		public Connection(Socket s, TestServer t) {
 			this.socket = s;
-			this.socket2 = s2;
 			this.robot_server = t;
 
 			try {
@@ -112,7 +106,7 @@ public class TestServer {
 				in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 				// outputStream 생성
-				oos = new ObjectOutputStream(socket2.getOutputStream());
+				oos = new ObjectOutputStream(socket.getOutputStream());
 			} catch (Exception e) {
 
 			}
@@ -125,6 +119,7 @@ public class TestServer {
 				try {
 					// client로부터 메시지 한 줄 받기
 					msg = in.readLine();
+					System.out.println(msg);
 					if (msg != null) {
 						if (msg.startsWith("#share#")) {
 							capture();
@@ -158,7 +153,7 @@ public class TestServer {
 
 	class Check_client extends TimerTask { // TimerTask에서 상속 받으면 run()메서드 override해야됨
 		public void run() {
-			Image img = null;
+			BufferedImage img = null;
 			int client_size = v_client_list.size();
 
 			System.out.println("*****************************");
@@ -174,13 +169,15 @@ public class TestServer {
 			for (int i = 0; i < client_size; i++) {
 				try {
 					capture();
-					img = TestServer.img;
+					img = (BufferedImage) TestServer.img;
 					if (img != null) {
 						System.out.println("이미지 있음");
 					} else {
 						System.out.println("이미지 없음");
 					}
-					((Connection) v_client_list.elementAt(i)).oos.writeObject(img);
+					System.out.println(img.getWidth(null) + " " + img.getHeight(null));
+					SendFile sf = new SendFile(((Connection) v_client_list.elementAt(i)).socket, img);
+					sf.start();
 				} catch (Exception e) {
 					v_client_list.removeElementAt(i);
 					// 통신이 되지 않을 경우 목록에서 삭제
@@ -189,6 +186,35 @@ public class TestServer {
 		} // run
 
 	} // Check_client Class
+
+	class SendFile extends Thread {
+		Socket socket;
+		BufferedImage img;
+
+		ObjectOutputStream oos;
+
+		SendFile(Socket s, BufferedImage i) {
+			this.socket = s;
+			this.img = i;
+
+			try {
+				oos = new ObjectOutputStream(socket.getOutputStream());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		@Override
+		public void run() {
+			try {
+				oos.writeObject((Image) img);
+				oos.flush();
+
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 
 	// Main
 	public static void main(String[] args) {
