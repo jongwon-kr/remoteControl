@@ -28,13 +28,13 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Vector;
 
-import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -47,16 +47,17 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-public class RobotClient extends JFrame implements ActionListener, Runnable {
+public class RobotClient extends JFrame implements ActionListener, Runnable, Serializable {
 	Robot r;
 	ServerSocket server_socket;
-	Socket socket_to_host;
+	Socket socket_to_host, screen_to_host;
 	String host_address = "127.0.0.1";
 	String s_local_address;
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
+	final int screen_port = 3333;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 1038;
+	int p2p_port_number = 1042;
 	// 공유 키
 	int shareKey = 0;
 	boolean connectCheck = false;
@@ -106,14 +107,13 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	public int ConnectCreation() {
 		try {
 			socket_to_host = new Socket(host_address, port_to_host_number);
+			screen_to_host = new Socket(host_address, screen_port);
+
 			server_socket = new ServerSocket(p2p_port_number);
 			getIpAddress();
 
 			in = new BufferedReader(new InputStreamReader(socket_to_host.getInputStream()));
 			out = new PrintWriter(socket_to_host.getOutputStream(), true);
-
-			SendScreen sc = new SendScreen(socket_to_host);
-			sc.start();
 
 			P2p_server robot_server = new P2p_server(server_socket);
 			// p2p서버 클래스
@@ -207,7 +207,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 		Thread t, rt;
 		if (command.equals("connect")) {
 			connectKey = conTf.getText();
-			out.println("#sha#share#");
+			out.println("#share#");
 			try {
 				int cnt = 0;
 				while (!connectCheck) {
@@ -223,7 +223,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 			if (connectCheck) {
 				Alert("접속 성공", "접속에 성공했습니다.");
 				out.println("#share#");
-				t = new Thread(new ReceiveScreen(socket_to_host));
+				t = new Thread(new ReceiveScreen(screen_to_host));
 				t.start();
 			} else {
 				Alert("접속 실패", "원격접속에 실패했습니다.");
@@ -272,6 +272,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 						}
 					} else if (in_msg.startsWith("#share#") && shareKey != 0) {
 						// 화면 공유 시작
+						SendScreen sc = new SendScreen(screen_to_host);
+						sc.start();
+					} else if (in_msg.startsWith("#send#") && shareKey == 0) {
+						System.out.println("이미지 받음");
 					}
 				} else {
 					break;
@@ -384,14 +388,14 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 	}
 
 	// 접속을 요청하는 컴퓨터에게 화면 전송
-	class SendScreen extends Thread {
+	class SendScreen extends Thread implements Serializable {
 		Socket socket;
 		ObjectOutputStream oos;
 
 		public SendScreen(Socket s) {
 			this.socket = s;
 			try {
-				oos = new ObjectOutputStream(socket.getOutputStream());
+				oos = new ObjectOutputStream(s.getOutputStream());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -401,11 +405,9 @@ public class RobotClient extends JFrame implements ActionListener, Runnable {
 
 			try {
 				while (true) {
-					try {
-						Thread.sleep(10);
-						oos.writeObject(capture());
-					} catch (IOException e) {
-						e.printStackTrace();
+					Thread.sleep(10);
+					if (oos != null) {
+						out.println("#send#ㅎㅇㅎㅇ");
 					}
 				}
 			} catch (InterruptedException e) {

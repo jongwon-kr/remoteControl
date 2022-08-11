@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Timer;
@@ -17,11 +18,15 @@ import java.util.Vector;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
-public class RobotServer extends JFrame {
+public class RobotServer extends JFrame implements Serializable {
 	final int server_port = 2222;
+	final int screen_port = 3333;
 	Socket client;
 	Vector v_client_list;
 	PrintWriter requestor;
+
+	ServerSocket screen_socket;
+	Socket screen;
 
 	public RobotServer() {
 		// client 수 관리 vector
@@ -36,10 +41,15 @@ public class RobotServer extends JFrame {
 		try {
 			// 포트번호 12167에 SocketServer생성
 			ServerSocket server_socket = new ServerSocket(server_port);
+			screen_socket = new ServerSocket(screen_port);
 			while (true) {
 				try {
 					// 접속할 client를 관리할 Socket 객체 생성
 					Socket server = server_socket.accept();
+					screen = screen_socket.accept();
+
+					ReceiveScreen rs = new ReceiveScreen(screen);
+					rs.start();
 
 					// client가 독립적으로 io작업을 할 수 있도록 Connection class 생성
 					Connection c = new Connection(server, this);
@@ -110,8 +120,6 @@ public class RobotServer extends JFrame {
 			} catch (Exception e) {
 
 			}
-			ReceiveScreen rs = new ReceiveScreen(s);
-			rs.start();
 		}
 
 		public void run() {
@@ -180,9 +188,7 @@ public class RobotServer extends JFrame {
 
 		public ReceiveScreen(Socket socket) {
 			socket = socket;
-
 			try {
-
 				// inputStream 생성
 				ois = new ObjectInputStream(socket.getInputStream());
 
