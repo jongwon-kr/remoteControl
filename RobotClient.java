@@ -50,17 +50,18 @@ import javax.swing.SwingConstants;
 public class RobotClient extends JFrame implements ActionListener, Runnable, Serializable {
 	Robot r;
 	ServerSocket server_socket;
-	Socket socket_to_host, screen_to_host;
+	Socket socket_to_host;
 	String host_address = "127.0.0.1";
 	String s_local_address;
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
 	final int screen_port = 3333;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 1042;
+	int p2p_port_number = 1054;
 	// 공유 키
 	int shareKey = 0;
-	boolean connectCheck = false;
+	boolean connectCheck = false, connectOn = false;
+
 	Vector v_client_address;
 
 	BufferedReader in = null;
@@ -107,7 +108,6 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	public int ConnectCreation() {
 		try {
 			socket_to_host = new Socket(host_address, port_to_host_number);
-			screen_to_host = new Socket(host_address, screen_port);
 
 			server_socket = new ServerSocket(p2p_port_number);
 			getIpAddress();
@@ -223,7 +223,8 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			if (connectCheck) {
 				Alert("접속 성공", "접속에 성공했습니다.");
 				out.println("#share#");
-				t = new Thread(new ReceiveScreen(screen_to_host));
+				out.println("#connectSuccess#");
+				t = new Thread(new ReceiveScreen(socket_to_host));
 				t.start();
 			} else {
 				Alert("접속 실패", "원격접속에 실패했습니다.");
@@ -272,10 +273,12 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 						}
 					} else if (in_msg.startsWith("#share#") && shareKey != 0) {
 						// 화면 공유 시작
-						SendScreen sc = new SendScreen(screen_to_host);
+						SendScreen sc = new SendScreen(socket_to_host);
 						sc.start();
 					} else if (in_msg.startsWith("#send#") && shareKey == 0) {
 						System.out.println("이미지 받음");
+					} else if (in_msg.startsWith("#connectSuccess#")) {
+						connectOn = true;
 					}
 				} else {
 					break;
@@ -406,8 +409,8 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			try {
 				while (true) {
 					Thread.sleep(10);
-					if (oos != null) {
-						out.println("#send#ㅎㅇㅎㅇ");
+					if (!connectOn) {
+						out.println("#shareKey#" + shareKey);
 					}
 				}
 			} catch (InterruptedException e) {
@@ -459,6 +462,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				while (onScreen) {
 					Thread.sleep(10);
 					try {
+						System.out.println("이미지 읽는중");
 						image = (BufferedImage) ois.readObject();
 					} catch (ClassNotFoundException e) {
 						e.printStackTrace();
