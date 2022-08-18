@@ -50,7 +50,7 @@ public class SendClient {
 			FileSender fs = new FileSender(socket, filePath, fileNm);
 			while (cnt < 100) {
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(100);
 					img = capture();
 					if (img != null) {
 						System.out.println(img.getWidth());
@@ -94,7 +94,6 @@ class FileSender extends Thread {
 		this.filePath = filePath;
 		
 		try {
-			socket.setSoTimeout(300000);
 			// 데이터 전송용 스트림 생성
 			dos = new DataOutputStream(socket.getOutputStream());
 		} catch (IOException e) {
