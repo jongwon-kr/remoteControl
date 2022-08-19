@@ -30,7 +30,7 @@ public class SendClient {
 		return bufImage;
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 
 		String serverIp = "127.0.0.1";
 		Socket socket = null;
@@ -49,6 +49,7 @@ public class SendClient {
 			int cnt = 0;
 			FileSender fs = new FileSender(socket, filePath, fileNm);
 			while (cnt < 1000) {
+				Thread.sleep(200);
 				img = capture();
 				ImageIO.write(img, "png", file);
 				System.out.println("이미지 저장 완료");
@@ -105,20 +106,9 @@ class FileSender extends Thread {
 			// 전송할 파일을 읽어서 Socket Server에 전송
 			String result = fileRead(dos);
 			System.out.println("result : " + result);
-
+			dos.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} finally {
-			try {
-				dos.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			try {
-				bis.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
 		}
 
 	}
