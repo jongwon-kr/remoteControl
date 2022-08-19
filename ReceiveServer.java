@@ -1,5 +1,12 @@
 package remoteConnect;
 
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -8,12 +15,54 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
 public class ReceiveServer extends JFrame {
+	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
+	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
+	File file = new File("C:/Users/Jongwon.JONG-PC/Desktop/receive/capture.png");
+	static Image img = null;
+
+	public ReceiveServer() {
+		super("receiveServer");
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+		setVisible(true);
+	}
+
+	public void capture() {
+		BufferedImage bufImage = null;
+		try {
+			System.out.println("캡쳐");
+			int w = this.getWidth();
+			int h = this.getHeight();
+			System.out.println(w + ", " + h);
+			this.img = (BufferedImage) ImageIO.read(file).getScaledInstance(w, h - 20, Image.SCALE_DEFAULT);
+			// this.repaint();
+			this.drawImage(img, w, h);
+			System.out.println(img.getHeight(this));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void drawImage(Image img, int x, int y) {
+		Graphics g = this.getGraphics();
+		g.drawImage(img, 0, 0, x, y, this);
+		this.paint(g);
+		this.repaint();
+	}
+
+	public void paint(Graphics g) {
+		if (RobotClient.img != null) {
+			g.drawImage(RobotClient.img, 0, 0, RobotClient.img.getWidth(this), RobotClient.img.getHeight(this), this);
+		}
+	}
 
 	public static void main(String[] args) {
-
+		ReceiveServer rs = new ReceiveServer();
 		ServerSocket serverSocket = null;
 		Socket socket = null;
 
@@ -38,16 +87,38 @@ public class ReceiveServer extends JFrame {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		UpdateScreen us = new UpdateScreen();
+		us.run();
+	}
 
+	static class UpdateScreen extends Thread {
+		ReceiveServer rs = new ReceiveServer();
+
+		public void run() {
+			while (true) {
+				try {
+					if (img != null) {
+						System.out.println("이미지 없음");
+					}
+					Thread.sleep(30);
+					rs.capture();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 }
 
 class Receiver extends Thread {
-
+	ReceiveServer rs;
 	Socket socket;
 	DataInputStream dis = null;
 	FileOutputStream fos = null;
 	BufferedOutputStream bos = null;
+	BufferedImage bufimg = null;
+	int w, h;
 
 	public Receiver(Socket socket) {
 		this.socket = socket;
@@ -85,10 +156,10 @@ class Receiver extends Thread {
 		}
 	}
 
-	private String fileWrite(DataInputStream dis) {
-
+	public String fileWrite(DataInputStream dis) {
+		Image img = null;
 		String result;
-		String filePath = "C:/Users/samsung010/Desktop/aaa";
+		String filePath = "C:/Users/Jongwon.JONG-PC/Desktop/receive/";
 
 		try {
 			System.out.println("파일 수신 작업을 시작합니다.");
@@ -164,7 +235,6 @@ class Receiver extends Thread {
 				e.printStackTrace();
 			}
 		}
-
 		return result;
 	}
 }

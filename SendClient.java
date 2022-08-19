@@ -21,7 +21,7 @@ public class SendClient {
 		try {
 			robot = new Robot();
 			Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-			bufImage = robot.createScreenCapture(area); // Robot Å¬·¡½º¸¦ ÀÌ¿ëÇÏ¿© ½ºÅ©¸° Ä¸ÃÄ.
+			bufImage = robot.createScreenCapture(area); // Robot í´ë˜ìŠ¤ë¥¼ ì´ìš©í•˜ì—¬ ìŠ¤í¬ë¦° ìº¡ì³.
 
 			// this.repaint();
 		} catch (Exception e) {
@@ -36,38 +36,30 @@ public class SendClient {
 		Socket socket = null;
 
 		try {
-			// ¼­¹ö ¿¬°á
+			// ì„œë²„ ì—°ê²°
 			socket = new Socket(serverIp, 1313);
-			System.out.println("¼­¹ö¿¡ ¿¬°áµÇ¾ú½À´Ï´Ù.");
+			System.out.println("ì„œë²„ì— ì—°ê²°ë˜ì—ˆìŠµë‹ˆë‹¤.");
 
-			// ÆÄÀÏÀü¼Û
+			// íŒŒì¼ì „ì†¡
 
-			String filePath = "C:/Users/samsung010/Desktop/qweqweqwe/";
+			String filePath = "C:/Users/Jongwon.JONG-PC/Desktop/send/";
 			String fileNm = "capture.png";
 			File file = new File(filePath + fileNm);
 			BufferedImage img = null;
 			int cnt = 0;
 			FileSender fs = new FileSender(socket, filePath, fileNm);
-			while (cnt < 100) {
-				try {
-					Thread.sleep(100);
-					img = capture();
-					if (img != null) {
-						System.out.println(img.getWidth());
-					}
-					ImageIO.write(img, "png", file);
-
-					System.out.println("ÀÌ¹ÌÁö ÀúÀå ¿Ï·á");
-					// String fileNm = "Á¤º¸º¸È£±â»ç.hwp";
-					fs.run();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+			while (cnt < 1000) {
+				img = capture();
+				ImageIO.write(img, "png", file);
+				System.out.println("ì´ë¯¸ì§€ ì €ì¥ ì™„ë£Œ");
 				cnt++;
+				fs.run();
 			}
-			// ¸Ş¼¼Áö Àü¼Û
+			// String fileNm = "ì •ë³´ë³´í˜¸ê¸°ì‚¬.hwp";
+
+			// ë©”ì„¸ì§€ ì „ì†¡
 			/*
-			 * String msg = "¹Ì¾ÈÇØ È­³»¼­! »ç¶ûÇØ"; MsgSender ms = new MsgSender(socket, msg);
+			 * String msg = "ë¯¸ì•ˆí•´ í™”ë‚´ì„œ! ì‚¬ë‘í•´"; MsgSender ms = new MsgSender(socket, msg);
 			 * ms.start();
 			 */
 
@@ -77,7 +69,7 @@ public class SendClient {
 	}
 }
 
-//ÆÄÀÏ Àü¼Û¿ë Å¬·¡½º
+//íŒŒì¼ ì „ì†¡ìš© í´ë˜ìŠ¤
 class FileSender extends Thread {
 
 	String filePath;
@@ -92,9 +84,9 @@ class FileSender extends Thread {
 		this.socket = socket;
 		this.fileNm = fileNm;
 		this.filePath = filePath;
-		
+
 		try {
-			// µ¥ÀÌÅÍ Àü¼Û¿ë ½ºÆ®¸² »ı¼º
+			// ë°ì´í„° ì „ì†¡ìš© ìŠ¤íŠ¸ë¦¼ ìƒì„±
 			dos = new DataOutputStream(socket.getOutputStream());
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -106,28 +98,28 @@ class FileSender extends Thread {
 
 		try {
 
-			// ÆÄÀÏÀü¼ÛÀ» ¼­¹ö¿¡ ¾Ë¸°´Ù.('file' ±¸ºĞÀÚ Àü¼Û)
+			// íŒŒì¼ì „ì†¡ì„ ì„œë²„ì— ì•Œë¦°ë‹¤.('file' êµ¬ë¶„ì ì „ì†¡)
 			dos.writeUTF("file");
 			dos.flush();
 
-			// Àü¼ÛÇÒ ÆÄÀÏÀ» ÀĞ¾î¼­ Socket Server¿¡ Àü¼Û
+			// ì „ì†¡í•  íŒŒì¼ì„ ì½ì–´ì„œ Socket Serverì— ì „ì†¡
 			String result = fileRead(dos);
 			System.out.println("result : " + result);
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
-		try {
-			dos.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+			try {
+				dos.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			try {
+				bis.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
-		try {
-			bis.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	}
 
@@ -136,12 +128,12 @@ class FileSender extends Thread {
 		String result;
 
 		try {
-			System.out.println("ÆÄÀÏ Àü¼Û ÀÛ¾÷À» ½ÃÀÛÇÕ´Ï´Ù.");
+			System.out.println("íŒŒì¼ ì „ì†¡ ì‘ì—…ì„ ì‹œì‘í•©ë‹ˆë‹¤.");
 
 			dos.writeUTF(fileNm);
-			System.out.println("ÆÄÀÏ ÀÌ¸§(" + fileNm + ")À» Àü¼ÛÇÏ¿´½À´Ï´Ù.");
+			System.out.println("íŒŒì¼ ì´ë¦„(" + fileNm + ")ì„ ì „ì†¡í•˜ì˜€ìŠµë‹ˆë‹¤.");
 
-			// ÆÄÀÏÀ» ÀĞ¾î¼­ ¼­¹ö¿¡ Àü¼Û
+			// íŒŒì¼ì„ ì½ì–´ì„œ ì„œë²„ì— ì „ì†¡
 			File file = new File(filePath + "/" + fileNm);
 			fis = new FileInputStream(file);
 			bis = new BufferedInputStream(fis);
@@ -153,14 +145,14 @@ class FileSender extends Thread {
 				dos.write(data, 0, len);
 			}
 
-			// ¼­¹ö¿¡ Àü¼Û
+			// ì„œë²„ì— ì „ì†¡
 			dos.flush();
 
 			/*
-			 * -- ¸ÔÅëµÈ´Ù. DataInputStream dis = new DataInputStream(socket.getInputStream());
+			 * -- ë¨¹í†µëœë‹¤. DataInputStream dis = new DataInputStream(socket.getInputStream());
 			 * result = dis.readUTF(); if( result.equals("SUCCESS") ){
-			 * System.out.println("ÆÄÀÏ Àü¼Û ÀÛ¾÷À» ¿Ï·áÇÏ¿´½À´Ï´Ù."); System.out.println("º¸³½ ÆÄÀÏÀÇ »çÀÌÁî : "
-			 * + file.length()); }else{ System.out.println("ÆÄÀÏ Àü¼Û ½ÇÆĞ!."); }
+			 * System.out.println("íŒŒì¼ ì „ì†¡ ì‘ì—…ì„ ì™„ë£Œí•˜ì˜€ìŠµë‹ˆë‹¤."); System.out.println("ë³´ë‚¸ íŒŒì¼ì˜ ì‚¬ì´ì¦ˆ : "
+			 * + file.length()); }else{ System.out.println("íŒŒì¼ ì „ì†¡ ì‹¤íŒ¨!."); }
 			 */
 
 			result = "SUCCESS";
@@ -179,7 +171,7 @@ class FileSender extends Thread {
 	}
 }
 
-//¸Ş¼¼Áö Àü¼Û¿ë Å¬·¡½º
+//ë©”ì„¸ì§€ ì „ì†¡ìš© í´ë˜ìŠ¤
 class MsgSender extends Thread {
 
 	Socket socket;
@@ -194,7 +186,7 @@ class MsgSender extends Thread {
 		this.msg = msg;
 
 		try {
-			// µ¥ÀÌÅÍ Àü¼Û¿ë ½ºÆ®¸² »ı¼º
+			// ë°ì´í„° ì „ì†¡ìš© ìŠ¤íŠ¸ë¦¼ ìƒì„±
 			dos = new DataOutputStream(socket.getOutputStream());
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -205,14 +197,14 @@ class MsgSender extends Thread {
 	public void run() {
 
 		try {
-			// ÆÄÀÏÀü¼Û ±¸ºĞÀÚ Àü¼Û('msg' Àü¼Û)
+			// íŒŒì¼ì „ì†¡ êµ¬ë¶„ì ì „ì†¡('msg' ì „ì†¡)
 			dos.writeUTF("msg");
 			dos.flush();
 
 			dos.writeUTF(msg);
 			dos.flush();
 
-			System.out.println("[" + msg + "] Àü¼Û");
+			System.out.println("[" + msg + "] ì „ì†¡");
 
 		} catch (IOException e) {
 			e.printStackTrace();
