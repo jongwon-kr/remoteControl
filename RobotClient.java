@@ -2,11 +2,10 @@ package remoteConnect;
 
 import java.awt.AWTException;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Robot;
@@ -46,6 +45,9 @@ import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
 
 public class RobotClient extends JFrame implements ActionListener, Runnable, Serializable {
 	Robot r;
@@ -61,6 +63,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	// 공유 키
 	int shareKey = 0;
 	boolean connectCheck = false, connectOn = false;
+	String nickName = "";
 
 	Vector v_client_address;
 
@@ -72,29 +75,15 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	BufferedOutputStream bout;
 
 	Thread t_connection;
-	String pathname, connectKey;
+	String pathname, connectKey, connectName;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
 	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
 	static Image img = null; // 생성자. UI 배치.
-
 	int shareTime = 600;
-	JPanel top_panel; // 상단 패널
-	JButton connect; // 연결 버튼
-	JButton makeShareKey; // 공유키 생성
-	JTextField conTf; // 연결 textfield
 
-	JPanel centerLeft_panel; // 중앙 패널
-	JPanel centerRight_panel;
-	JSplitPane centerSplitPane; // 중앙 splitpane
-	JSplitPane mainSplitPane; // 메인화면 splitpane
 	JDialog dialog;
-
-	JMenuBar menubar;
-	JMenu menu;
-	JMenuItem server_ip;
-
 	JPanel connect_panel; // 연결부 패널
 	JPanel connect_panel_top; // 연결부 패널 상단
 	JPanel connect_panel_bottom; // 연결부 패널 하단
@@ -106,23 +95,126 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 	// 연결부 하단 패널
 	JLabel bottom_label1;
-	JTextField connect_code_tf;
+	JTextField bottom_name_tf;
+	JTextField bottom_code_tf;
 	JButton connect_btn;
 
 	// 로그인 부
 	JLabel name_label;
 	JTextField id_tf;
-	JButton login_btn;
+	JButton create_btn;
 
 	JLabel con_state_label; // 연결 상태
 
 	public RobotClient() {
-		super("원격 연결");
+		super("remote connect");
 		ConnectCreation();
-		getContentPane().add(setUI()).setBackground(Color.white);
+		getContentPane().setBackground(new Color(244, 250, 255));
+		setBounds(100, 100, 645, 365);
+		setLocationRelativeTo(null);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setSize(484, 363);
-		menuSet();
+		setLayout(null);
+
+		connect_panel = new JPanel();
+		connect_panel.setBounds(250, 15, 360, 300);
+		connect_panel.setBorder(new LineBorder(new Color(117, 186, 255), 1, true));
+		add(connect_panel);
+		connect_panel.setLayout(new GridLayout(0, 1, 0, 0));
+
+		// top_panel
+		connect_panel_top = new JPanel();
+		connect_panel_top.setBackground(new Color(230, 242, 255));
+		connect_panel_top.setBorder(new MatteBorder(0, 0, 1, 0, (Color) new Color(117, 186, 255)));
+		connect_panel.add(connect_panel_top);
+		connect_panel_top.setLayout(null);
+
+		top_label1 = new JLabel("PC 원격코드");
+		top_label1.setBounds(12, 26, 334, 30);
+		connect_panel_top.add(top_label1);
+		top_label1.setFont(new Font("맑은 고딕", Font.BOLD, 22));
+		top_label1.setHorizontalAlignment(SwingConstants.CENTER);
+		top_label1.setBackground(new Color(255, 255, 255));
+
+		top_label2 = new JLabel("이 코드를 다른 PC에 입력하면 원격 접속이 됩니다 ");
+		top_label2.setBounds(22, 66, 324, 19);
+		connect_panel_top.add(top_label2);
+		top_label2.setHorizontalAlignment(SwingConstants.CENTER);
+		top_label2.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
+
+		top_label3 = new JLabel("코드를 생성하면 표시됩니다.");
+		top_label3.setBounds(12, 95, 334, 30);
+		connect_panel_top.add(top_label3);
+		top_label3.setFont(new Font("맑은 고딕", Font.BOLD, 15));
+		top_label3.setHorizontalAlignment(SwingConstants.CENTER);
+
+		// bottom panel
+		connect_panel_bottom = new JPanel();
+		connect_panel_bottom.setBackground(new Color(230, 242, 255));
+		connect_panel.add(connect_panel_bottom);
+		connect_panel_bottom.setLayout(null);
+
+		bottom_label1 = new JLabel("접속하려는 PC의 닉네임과 원격 코드를 입력하세요.");
+		bottom_label1.setBounds(12, 30, 334, 25);
+		bottom_label1.setHorizontalAlignment(SwingConstants.CENTER);
+		bottom_label1.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+		connect_panel_bottom.add(bottom_label1);
+
+		bottom_name_tf = new JTextField();
+		bottom_name_tf.setBounds(69, 65, 165, 25);
+		bottom_name_tf.setEnabled(false);
+		connect_panel_bottom.add(bottom_name_tf);
+
+		bottom_code_tf = new JTextField();
+		bottom_code_tf.setBounds(69, 92, 165, 25);
+		bottom_code_tf.setEnabled(false);
+		connect_panel_bottom.add(bottom_code_tf);
+
+		connect_btn = new JButton("connect");
+		connect_btn.setBounds(251, 65, 95, 52);
+		connect_btn.setFont(new Font("맑은 고딕", Font.BOLD, 14));
+		connect_panel_bottom.add(connect_btn);
+		connect_btn.setBackground(Color.white);
+		connect_btn.addActionListener(this);
+		connect_btn.setActionCommand("connect");
+		connect_btn.setFocusable(false);
+		connect_btn.setEnabled(false);
+		connect_panel_bottom.add(connect_btn);
+
+		JLabel bottom_name_label = new JLabel("Name");
+		bottom_name_label.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
+		bottom_name_label.setHorizontalAlignment(SwingConstants.RIGHT);
+		bottom_name_label.setBounds(12, 65, 50, 25);
+		connect_panel_bottom.add(bottom_name_label);
+
+		JLabel bottom_code_label = new JLabel("Code");
+		bottom_code_label.setFont(new Font("맑은 고딕", Font.PLAIN, 13));
+		bottom_code_label.setHorizontalAlignment(SwingConstants.RIGHT);
+		bottom_code_label.setBounds(12, 92, 50, 25);
+		connect_panel_bottom.add(bottom_code_label);
+
+		name_label = new JLabel("사용할 닉네임을 적어주세요.");
+		name_label.setFont(new Font("맑은 고딕", Font.BOLD, 13));
+		name_label.setHorizontalAlignment(SwingConstants.CENTER);
+		name_label.setBounds(22, 15, 200, 25);
+		add(name_label);
+
+		id_tf = new JTextField();
+		id_tf.setBounds(32, 50, 180, 25);
+		getContentPane().add(id_tf);
+
+		create_btn = new JButton("Create");
+		create_btn.setBackground(Color.white);
+		create_btn.setFont(new Font("맑은 고딕", Font.BOLD, 12));
+		create_btn.addActionListener(this);
+		create_btn.setBounds(79, 85, 86, 30);
+		create_btn.setActionCommand("create");
+		create_btn.setFocusable(connectCheck);
+		add(create_btn);
+
+		con_state_label = new JLabel("접속상태 : OFF");
+		con_state_label.setBounds(12, 301, 226, 15);
+		add(con_state_label);
+
 		setVisible(true);
 	}
 
@@ -156,53 +248,6 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		} // for
 	}
 
-	// Main화면 UI설정
-	public Component setUI() {
-		top_panel = new JPanel(new FlowLayout());
-		centerLeft_panel = new JPanel();
-		centerRight_panel = new JPanel();
-
-		conTf = new JTextField();
-		conTf.setPreferredSize(new Dimension(100, 30));
-
-		// 연결 버튼
-		connect = new JButton("연결");
-		connect.setBackground(Color.white);
-		connect.setFocusable(false);
-		connect.setFont(new Font("Dialog", Font.BOLD, 12));
-		connect.setPreferredSize(new Dimension(60, 30));
-		connect.setActionCommand("connect");
-		connect.addActionListener(this);
-
-		// 공유키 생성 버튼
-		makeShareKey = new JButton("공유키 생성");
-		makeShareKey.setBackground(Color.white);
-		makeShareKey.setFocusable(false);
-		makeShareKey.setFont(new Font("Dialog", Font.BOLD, 12));
-		makeShareKey.setPreferredSize(new Dimension(120, 30));
-		makeShareKey.setActionCommand("makeShareKey");
-		makeShareKey.addActionListener(this);
-
-		centerLeft_panel.setPreferredSize(new Dimension(100, 300));
-		top_panel.setLayout(new FlowLayout(FlowLayout.LEFT));
-		top_panel.add(conTf);
-		top_panel.add(connect);
-		top_panel.add(makeShareKey);
-		centerSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, centerLeft_panel, centerRight_panel);
-		mainSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, top_panel, centerSplitPane);
-		return mainSplitPane;
-	}
-
-	public void menuSet() {
-		menubar = new JMenuBar();
-		menu = new JMenu("설정");
-		server_ip = new JMenuItem("Server IP 설정");
-		server_ip.addActionListener(this);
-		server_ip.setActionCommand("server_ip");
-		menu.add(server_ip);
-		setJMenuBar(menubar);
-	}
-
 	public void Alert(String alert_title, String alert_message) {
 		// alert 메소드
 		dialog = new JDialog(this, alert_title, true);
@@ -211,7 +256,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		lll.setHorizontalTextPosition(SwingConstants.CENTER);
 		JPanel ttt = new JPanel();
 		ttt.add(lll);
-		dialog.setLocation(180, 80);
+		dialog.setLocationRelativeTo(null);
 		dialog.setSize(320, 100);
 		dialog.setContentPane(ttt);
 		dialog.show();
@@ -222,8 +267,9 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		String command = e.getActionCommand();
 		Thread t, rt;
 		if (command.equals("connect")) {
-			connectKey = conTf.getText();
-			out.println("#share#");
+			connectKey = bottom_code_tf.getText();
+			connectName = bottom_name_tf.getText();
+			out.println("#share#" + nickName);
 			try {
 				int cnt = 0;
 				while (!connectCheck) {
@@ -245,15 +291,20 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			} else {
 				Alert("접속 실패", "원격접속에 실패했습니다.");
 			}
-		} else if (command.equals("makeShareKey")) {
+		} else if (command.equals("create")) {
 			out.println("공유키가 생성되었습니다.");
 			shareKey = (int) (Math.random() * 100000);
 			System.out.println(shareKey);
-			makeShareKey.setVisible(false);
-			connect.setVisible(false);
-			conTf.setText("공유키 : " + shareKey);
-			conTf.disable();
-			Alert("공유", "공유키 : " + String.valueOf(shareKey));
+			top_label3.setText("원격코드 : " + String.valueOf(shareKey));
+			nickName = id_tf.getText();
+			name_label.setText(nickName + "으로 접속 되었습니다.");
+			id_tf.setVisible(false);
+			create_btn.setVisible(false);
+			connect_btn.setEnabled(true);
+			bottom_name_tf.setEnabled(true);
+			bottom_code_tf.setEnabled(true);
+			con_state_label.setText("접속상태 : ON");
+			Alert("공유", "공유키가 생성되었습니다. : " + String.valueOf(shareKey));
 		}
 	}
 
@@ -289,6 +340,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 						}
 					} else if (in_msg.startsWith("#share#") && shareKey != 0) {
 						// 화면 공유 시작
+						Alert("원격접속", "다른 PC와 원격접속이 되었습니다.");
 						SendScreen sc = new SendScreen(socket_to_host);
 						sc.start();
 					} else if (in_msg.startsWith("#send#") && shareKey == 0) {
