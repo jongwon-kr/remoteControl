@@ -51,13 +51,13 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	Robot r;
 	ServerSocket server_socket;
 	Socket socket_to_host;
-	String host_address = "127.0.0.1";
+	String host_address = "192.168.35.250";
 	String s_local_address;
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
 	final int screen_port = 3333;
 	// client끼리 통신할 port번호
-	int p2p_port_number = 1054;
+	int p2p_port_number = 1055;
 	// 공유 키
 	int shareKey = 0;
 	boolean connectCheck = false, connectOn = false;
@@ -95,6 +95,27 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	JMenu menu;
 	JMenuItem server_ip;
 
+	JPanel connect_panel; // 연결부 패널
+	JPanel connect_panel_top; // 연결부 패널 상단
+	JPanel connect_panel_bottom; // 연결부 패널 하단
+
+	// 연결부 상단 패널
+	JLabel top_label1;
+	JLabel top_label2;
+	JLabel top_label3;
+
+	// 연결부 하단 패널
+	JLabel bottom_label1;
+	JTextField connect_code_tf;
+	JButton connect_btn;
+
+	// 로그인 부
+	JLabel name_label;
+	JTextField id_tf;
+	JButton login_btn;
+
+	JLabel con_state_label; // 연결 상태
+
 	public RobotClient() {
 		super("원격 연결");
 		ConnectCreation();
@@ -108,15 +129,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	public int ConnectCreation() {
 		try {
 			socket_to_host = new Socket(host_address, port_to_host_number);
-
-			server_socket = new ServerSocket(p2p_port_number);
 			getIpAddress();
 
 			in = new BufferedReader(new InputStreamReader(socket_to_host.getInputStream()));
 			out = new PrintWriter(socket_to_host.getOutputStream(), true);
-
-			P2p_server robot_server = new P2p_server(server_socket);
-			// p2p서버 클래스
 		} catch (UnknownHostException e) {
 			Alert("경고", "알수없는 호스트입니다.");
 			return 0;
