@@ -138,6 +138,10 @@ public class RobotServer extends JFrame implements Serializable {
 							message(msg);
 						} else if (msg.startsWith("#wheel#")) {
 							message(msg);
+						} else if (msg.startsWith("#keyPressed#")) {
+							message(msg);
+						} else if (msg.startsWith("#keyReleased#")) {
+							message(msg);
 						} else if (msg.startsWith("#connect#")) {
 							message(msg);
 						} else if (msg.startsWith("#shareKey#")) {
