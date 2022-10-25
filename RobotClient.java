@@ -16,6 +16,8 @@ import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -38,14 +40,9 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
 
@@ -58,12 +55,9 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	// server와 통신할 port번호
 	int port_to_host_number = 2222;
 	final int screen_port = 3333;
-	// client끼리 통신할 port번호
-	int p2p_port_number = 1055;
 	// 공유 키
-	int shareKey = 0;
 	boolean connectCheck = false, connectOn = false;
-	String nickName = "";
+	String shareKey, nickName = "";
 
 	Vector v_client_address;
 
@@ -208,7 +202,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		create_btn.addActionListener(this);
 		create_btn.setBounds(79, 85, 86, 30);
 		create_btn.setActionCommand("create");
-		create_btn.setFocusable(connectCheck);
+		create_btn.setFocusable(true);
 		add(create_btn);
 
 		con_state_label = new JLabel("접속상태 : OFF");
@@ -269,7 +263,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		if (command.equals("connect")) {
 			connectKey = bottom_code_tf.getText();
 			connectName = bottom_name_tf.getText();
-			out.println("#share#" + nickName);
+			out.println("#share#" + ":" + connectKey + ":" + connectName);
 			try {
 				int cnt = 0;
 				while (!connectCheck) {
@@ -284,7 +278,6 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			}
 			if (connectCheck) {
 				Alert("접속 성공", "접속에 성공했습니다.");
-				out.println("#share#");
 				out.println("#connectSuccess#");
 				t = new Thread(new ReceiveScreen(socket_to_host));
 				t.start();
@@ -292,8 +285,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				Alert("접속 실패", "원격접속에 실패했습니다.");
 			}
 		} else if (command.equals("create")) {
-			out.println("공유키가 생성되었습니다.");
-			shareKey = (int) (Math.random() * 100000);
+			shareKey = String.valueOf((int) (Math.random() * 100000));
 			System.out.println(shareKey);
 			top_label3.setText("원격코드 : " + String.valueOf(shareKey));
 			nickName = id_tf.getText();
@@ -304,6 +296,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			bottom_name_tf.setEnabled(true);
 			bottom_code_tf.setEnabled(true);
 			con_state_label.setText("접속상태 : ON");
+			out.println(nickName);
 			Alert("공유", "공유키가 생성되었습니다. : " + String.valueOf(shareKey));
 		}
 	}
@@ -317,34 +310,35 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			while (true) {
 				in_msg = in.readLine();
 				System.out.println("넘어온 메시지" + in_msg);
-				// 보통 #c#이 넘어오다가 검색하면 #s#sdfsdfwef 이 넘어옴
-				// System.out.println(in_msg)
 				if (in_msg != null) {
-					if (in_msg.startsWith("#connect#")) {
-						if (shareKey != 0)
-							out.println("#shareKey#" + shareKey);
-					}
-					if (in_msg.startsWith("#press#") && shareKey != 0) {
+					if (in_msg.startsWith("#press#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
 						r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-					} else if (in_msg.startsWith("#release#") && shareKey != 0) {
+					} else if (in_msg.startsWith("#release#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
 						r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-					} else if (in_msg.startsWith("#drag#") && shareKey != 0) {
-						r.mouseMove(Integer.valueOf(in_msg.substring(6).split(":")[0]),
-								Integer.valueOf(in_msg.substring(6).split(":")[1]));
-					} else if (in_msg.startsWith("#move#") && shareKey != 0) {
-						r.mouseMove(Integer.valueOf(in_msg.substring(6).split(":")[0]),
-								Integer.valueOf(in_msg.substring(6).split(":")[1]));
-					} else if (in_msg.startsWith("#shareKey#") && connectKey != null) {
-						if (connectKey.equals(in_msg.substring(10))) {
+					} else if (in_msg.startsWith("#drag#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						r.mouseMove(Integer.valueOf(in_msg.split(":")[3]), Integer.valueOf(in_msg.split(":")[4]));
+					} else if (in_msg.startsWith("#move#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						r.mouseMove(Integer.valueOf(in_msg.split(":")[3]), Integer.valueOf(in_msg.split(":")[4]));
+					} else if (in_msg.startsWith("#wheel#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						if (in_msg.split(":")[3].equals("1")) {
+							r.mouseWheel(15);
+						} else if (in_msg.split(":")[3].equals("-1")) {
+							r.mouseWheel(-15);
+						}
+					} else if (in_msg.startsWith("#shareKey#") && connectKey != null && connectName != null) {
+						if (connectKey.equals(in_msg.split(":")[1]) && connectName.equals(in_msg.split(":")[2])) {
 							connectCheck = true;
 						}
-					} else if (in_msg.startsWith("#share#") && shareKey != 0) {
+					} else if (in_msg.startsWith("#share#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
 						// 화면 공유 시작
-						Alert("원격접속", "다른 PC와 원격접속이 되었습니다.");
 						SendScreen sc = new SendScreen(socket_to_host);
 						sc.start();
-					} else if (in_msg.startsWith("#send#") && shareKey == 0) {
-						System.out.println("이미지 받음");
 					} else if (in_msg.startsWith("#connectSuccess#")) {
 						connectOn = true;
 					}
@@ -476,9 +470,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 			try {
 				while (true) {
-					Thread.sleep(10);
+					Thread.sleep(1000);
 					if (!connectOn) {
-						out.println("#shareKey#" + shareKey);
+						out.println("#shareKey#" + ":" + shareKey + ":" + nickName);
+						System.out.println("??");
 					}
 				}
 			} catch (InterruptedException e) {
@@ -503,7 +498,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	}
 
 	// 접속요청한 화면 받아오기
-	class ReceiveScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener {
+	class ReceiveScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener {
 		boolean onScreen = false;
 		Socket socket;
 
@@ -520,6 +515,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			onScreen = true;
 			addMouseListener(this);
 			addMouseMotionListener(this);
+			addMouseWheelListener(this);
 			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 			setVisible(true);
 		}
@@ -574,12 +570,12 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 
 		public void mousePressed(MouseEvent e) {
-			out.println("#press#" + e.getX() + ":" + e.getY());
+			out.println("#press#" + ":" + connectKey + ":" + connectName + ":" + e.getX() + ":" + e.getY());
 			// 마우스 버튼 클릭
 		}
 
 		public void mouseReleased(MouseEvent e) {
-			out.println("#release#" + e.getX() + ":" + e.getY());
+			out.println("#release#" + ":" + connectKey + ":" + connectName + ":" + e.getX() + ":" + e.getY());
 		}
 
 		public void mouseEntered(MouseEvent e) {
@@ -591,12 +587,17 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 
 		public void mouseDragged(MouseEvent e) {
-			out.println("#drag#" + e.getX() + ":" + e.getY());
+			out.println("#drag#" + ":" + connectKey + ":" + connectName + ":" + e.getX() + ":" + e.getY());
 		}
 
 		public void mouseMoved(MouseEvent e) {
-			out.println("#move#" + e.getX() + ":" + e.getY());
+			out.println("#move#" + ":" + connectKey + ":" + connectName + ":" + e.getX() + ":" + e.getY());
 			// move
+		}
+
+		public void mouseWheelMoved(MouseWheelEvent e) {
+			// 아래로 1 위로 -1
+			out.println("#wheel#" + ":" + connectKey + ":" + connectName + ":" + String.valueOf(e.getWheelRotation()));
 		}
 	}
 
