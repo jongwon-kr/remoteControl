@@ -13,6 +13,8 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -43,6 +45,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
 
@@ -267,7 +270,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			try {
 				int cnt = 0;
 				while (!connectCheck) {
-					Thread.sleep(1000);
+					Thread.sleep(200);
 					System.out.println("서버에 접속중입니다.");
 					cnt++;
 					if (cnt == 6)
@@ -313,10 +316,22 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				if (in_msg != null) {
 					if (in_msg.startsWith("#press#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
-						r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+						if (in_msg.split(":")[3].equals("left")) {
+							r.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+						} else if (in_msg.split(":")[3].equals("middle")) {
+							r.mousePress(InputEvent.BUTTON2_DOWN_MASK);
+						} else if (in_msg.split(":")[3].equals("right")) {
+							r.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+						}
 					} else if (in_msg.startsWith("#release#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
-						r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+						if (in_msg.split(":")[3].equals("left")) {
+							r.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+						} else if (in_msg.split(":")[3].equals("middle")) {
+							r.mouseRelease(InputEvent.BUTTON2_DOWN_MASK);
+						} else if (in_msg.split(":")[3].equals("right")) {
+							r.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+						}
 					} else if (in_msg.startsWith("#drag#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
 						r.mouseMove(Integer.valueOf(in_msg.split(":")[3]), Integer.valueOf(in_msg.split(":")[4]));
@@ -326,10 +341,16 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 					} else if (in_msg.startsWith("#wheel#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
 						if (in_msg.split(":")[3].equals("1")) {
-							r.mouseWheel(15);
+							r.mouseWheel(1);
 						} else if (in_msg.split(":")[3].equals("-1")) {
-							r.mouseWheel(-15);
+							r.mouseWheel(-1);
 						}
+					} else if (in_msg.startsWith("#keyPressed#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						r.keyPress(Integer.valueOf(in_msg.split(":")[3]));
+					} else if (in_msg.startsWith("#keyReleased#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						r.keyRelease(Integer.valueOf(in_msg.split(":")[3]));
 					} else if (in_msg.startsWith("#shareKey#") && connectKey != null && connectName != null) {
 						if (connectKey.equals(in_msg.split(":")[1]) && connectName.equals(in_msg.split(":")[2])) {
 							connectCheck = true;
@@ -498,11 +519,12 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	}
 
 	// 접속요청한 화면 받아오기
-	class ReceiveScreen extends JFrame implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener {
+	class ReceiveScreen extends JFrame
+			implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 		boolean onScreen = false;
 		Socket socket;
-
 		ObjectInputStream ois;
+		String checkMouseButton;
 
 		public ReceiveScreen(Socket s) {
 			super("접속화면");
@@ -516,6 +538,8 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			addMouseListener(this);
 			addMouseMotionListener(this);
 			addMouseWheelListener(this);
+			addKeyListener(this);
+			setFocusTraversalKeysEnabled(false);
 			setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 			setVisible(true);
 		}
@@ -565,17 +589,27 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			}
 		}
 
-		public void mouseClicked(MouseEvent e) {
-			// mouse Click
-		}
-
 		public void mousePressed(MouseEvent e) {
-			out.println("#press#" + ":" + connectKey + ":" + connectName + ":" + e.getX() + ":" + e.getY());
+			if (SwingUtilities.isLeftMouseButton(e)) {
+				checkMouseButton = "left";
+			} else if (SwingUtilities.isMiddleMouseButton(e)) {
+				checkMouseButton = "middle";
+			} else if (SwingUtilities.isRightMouseButton(e)) {
+				checkMouseButton = "right";
+			}
+			out.println("#press#" + ":" + connectKey + ":" + connectName + ":" + checkMouseButton);
 			// 마우스 버튼 클릭
 		}
 
 		public void mouseReleased(MouseEvent e) {
-			out.println("#release#" + ":" + connectKey + ":" + connectName + ":" + e.getX() + ":" + e.getY());
+			if (SwingUtilities.isLeftMouseButton(e)) {
+				checkMouseButton = "left";
+			} else if (SwingUtilities.isMiddleMouseButton(e)) {
+				checkMouseButton = "middle";
+			} else if (SwingUtilities.isRightMouseButton(e)) {
+				checkMouseButton = "right";
+			}
+			out.println("#release#" + ":" + connectKey + ":" + connectName + ":" + checkMouseButton);
 		}
 
 		public void mouseEntered(MouseEvent e) {
@@ -598,6 +632,28 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public void mouseWheelMoved(MouseWheelEvent e) {
 			// 아래로 1 위로 -1
 			out.println("#wheel#" + ":" + connectKey + ":" + connectName + ":" + String.valueOf(e.getWheelRotation()));
+		}
+
+		public void keyTyped(KeyEvent e) {
+
+		}
+
+		public void keyPressed(KeyEvent e) {
+			// 한영변환이 안됨,, 입력할 때 한글이면 press가 일어나지 않는다.
+			if (e.getKeyCode() != 0)
+				out.println(
+						"#keyPressed#" + ":" + connectKey + ":" + connectName + ":" + String.valueOf(e.getKeyCode()));
+		}
+
+		public void keyReleased(KeyEvent e) {
+			if (e.getKeyCode() != 0)
+				out.println(
+						"#keyReleased#" + ":" + connectKey + ":" + connectName + ":" + String.valueOf(e.getKeyCode()));
+		}
+
+		public void mouseClicked(MouseEvent e) {
+			// TODO Auto-generated method stub
+
 		}
 	}
 
