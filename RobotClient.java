@@ -1,11 +1,9 @@
 package remoteConnect;
 
-import java.awt.AWTException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Rectangle;
@@ -29,16 +27,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Vector;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -54,16 +52,14 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	Robot r;
 	ServerSocket server_socket;
 	Socket socket_to_host;
-	String host_address = "192.168.35.147";
-	String s_local_address;
+	String host_address = "192.168.0.8";
+	String send_server_address;
 	// server와 통신할 port번호
-	int port_to_host_number = 2222;
-	final int screen_port = 3333;
+	int port_to_host_number = 12566;
+	int screen_port = 3333;
 	// 공유 키
 	boolean connectCheck = false, connectOn = false;
-	String shareKey, nickName = "";
-
-	Vector v_client_address;
+	static String shareKey, nickName = "";
 
 	BufferedReader in = null;
 	static PrintWriter out;
@@ -79,7 +75,6 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	final int SCREEN_WIDTH = screenSize.width; // 화면 가로 너비
 	final int SCREEN_HEIGHT = screenSize.height; // 화면 세로 너비
 	static Image img = null; // 생성자. UI 배치.
-	int shareTime = 600;
 
 	JDialog dialog;
 	JPanel connect_panel; // 연결부 패널
@@ -105,7 +100,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	JLabel con_state_label; // 연결 상태
 
 	public RobotClient() {
-		super("remote connect");
+		super("원격 접속");
 		ConnectCreation();
 		getContentPane().setBackground(new Color(244, 250, 255));
 		setBounds(100, 100, 645, 365);
@@ -212,15 +207,12 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		con_state_label = new JLabel("접속상태 : OFF");
 		con_state_label.setBounds(12, 301, 226, 15);
 		add(con_state_label);
-
 		setVisible(true);
 	}
 
 	public int ConnectCreation() {
 		try {
 			socket_to_host = new Socket(host_address, port_to_host_number);
-			getIpAddress();
-
 			in = new BufferedReader(new InputStreamReader(socket_to_host.getInputStream()));
 			out = new PrintWriter(socket_to_host.getOutputStream(), true);
 		} catch (UnknownHostException e) {
@@ -232,18 +224,6 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			return 0;
 		} // try-catch
 		return 1;
-	}
-
-	public void getIpAddress() {
-		InetAddress local_ip = socket_to_host.getLocalAddress();
-		s_local_address = local_ip.toString();
-		// 위에서 구하면 /127.0.0.1 처럼 나오는데, 앞의 슬래쉬(/) 를 제거하기 위한 코드 부분
-		for (int i = s_local_address.length() - 1; i >= 0; i--) {
-			if (s_local_address.charAt(i) == '/') {
-				s_local_address = s_local_address.substring(i + 1);
-				break;
-			} // if
-		} // for
 	}
 
 	public void Alert(String alert_title, String alert_message) {
@@ -282,9 +262,9 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			}
 			if (connectCheck) {
 				Alert("접속 성공", "접속에 성공했습니다.");
-				out.println("#connectSuccess#");
-				t = new Thread(new ReceiveScreen(socket_to_host));
-				t.start();
+				Thread rScreen = new Thread(new ReceiveScreen());
+				rScreen.start();
+				System.out.println("???");
 			} else {
 				Alert("접속 실패", "원격접속에 실패했습니다.");
 			}
@@ -300,15 +280,12 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			bottom_name_tf.setEnabled(true);
 			bottom_code_tf.setEnabled(true);
 			con_state_label.setText("접속상태 : ON");
-			out.println(nickName);
 			Alert("공유", "공유키가 생성되었습니다. : " + String.valueOf(shareKey));
 		}
 	}
 
 	public void run() {
 		String in_msg = null;
-		Thread st;
-		System.out.println("run");
 		try {
 			r = new Robot();
 			double x, y;
@@ -364,10 +341,13 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 					} else if (in_msg.startsWith("#share#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
 						// 화면 공유 시작
-						SendScreen sc = new SendScreen(socket_to_host);
+						Thread sc = new Thread(new SendScreen());
 						sc.start();
 					} else if (in_msg.startsWith("#connectSuccess#")) {
 						connectOn = true;
+						if (!shareKey.equals(in_msg.split(":")[1]) && !nickName.equals(in_msg.split(":")[2])) {
+							send_server_address = in_msg.split(":")[3];
+						}
 					}
 				} else {
 					break;
@@ -464,34 +444,11 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 	}
 
-	class RemoteScreen {
-		Robot r;
-
-		public RemoteScreen() {
-			try {
-				r = new Robot();
-				while (true) {
-
-				}
-			} catch (AWTException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
 	// 접속을 요청하는 컴퓨터에게 화면 전송
-	class SendScreen extends Thread implements Serializable {
-		Socket socket;
-		ObjectOutputStream oos;
-
-		public SendScreen(Socket s) {
-			this.socket = s;
-			try {
-				oos = new ObjectOutputStream(s.getOutputStream());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+	class SendScreen implements Runnable {
+		Socket sendSocket = null;
+		BufferedOutputStream bout;
+		BufferedImage bufImg;
 
 		public void run() {
 			try {
@@ -499,22 +456,39 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 					Thread.sleep(100);
 					if (!connectOn) {
 						out.println("#shareKey#" + ":" + shareKey + ":" + nickName);
+					} else {
+						break;
+					}
+				}
+				if (connectOn) {
+					try {
+						while (sendSocket == null) {
+							sendSocket = new Socket(send_server_address, 3333);
+							System.out.println(send_server_address + "에 연결완료");
+						}
+						bout = new BufferedOutputStream(sendSocket.getOutputStream());
+						while (bout != null) {
+							Thread.sleep(100);
+							bufImg = capture();
+							ImageIO.write(bufImg, "png", bout);
+							bout.flush();
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
 				}
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 
-		public Image capture() {
+		public BufferedImage capture() {
 			Robot robot;
 			BufferedImage bufImage = null;
 			try {
 				robot = new Robot();
 				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
 				bufImage = robot.createScreenCapture(area); // Robot 클래스를 이용하여 스크린 캡쳐.
-				// this.repaint();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -524,25 +498,20 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 	// 접속요청한 화면 받아오기
 	class ReceiveScreen extends JFrame
-			implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
+			implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener, KeyListener, ActionListener {
 		boolean onScreen = false;
-		Socket socket;
-		ObjectInputStream ois;
 		String checkMouseButton;
 		JPanel connectStatePanel;
 		JLabel conTimeLabel;
 		JLabel conUserLabel;
 		JButton phoneBtn;
-		JPanel receiveScreenPanel;
+		static JPanel receiveScreenPanel;
+		Timer timer;
+		TimerTask timerTask;
+		int connectTime;
 
-		public ReceiveScreen(Socket s) {
+		public ReceiveScreen() {
 			super("접속화면");
-			this.socket = s;
-			try {
-				ois = new ObjectInputStream(socket.getInputStream());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
 			onScreen = true;
 			connectStatePanel = new JPanel();
 			connectStatePanel.setBorder(new MatteBorder(3, 0, 0, 0, (Color) new Color(68, 68, 255)));
@@ -550,18 +519,21 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			connectStatePanel.setLayout(new BorderLayout());
 			add("South", connectStatePanel);
 
-			conTimeLabel = new JLabel("연결 시간 : 00 : 00");
+			conTimeLabel = new JLabel("연결 시간 : 0분 0초");
 			conTimeLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
 			conTimeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 			connectStatePanel.add("West", conTimeLabel);
 
-			JLabel conUserLabel = new JLabel("연결 상대 : aaa");
+			JLabel conUserLabel = new JLabel("연결 상대 : " + bottom_name_tf.getText());
 			conUserLabel.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
 			conUserLabel.setHorizontalAlignment(SwingConstants.CENTER);
 			connectStatePanel.add("Center", conUserLabel);
 
 			JButton phoneBtn = new JButton("음성 연결");
+			phoneBtn.addActionListener(this);
+			phoneBtn.setActionCommand("phone");
 			phoneBtn.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
+
 			connectStatePanel.add("East", phoneBtn);
 
 			receiveScreenPanel = new JPanel();
@@ -571,55 +543,15 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			receiveScreenPanel.addMouseWheelListener(this);
 			receiveScreenPanel.addKeyListener(this);
 			add("Center", receiveScreenPanel);
-
-			setFocusTraversalKeysEnabled(false);
-			setSize(1280, 960);
+			setSize(1280, 754);
 			setVisible(true);
+			receiveScreenPanel.setFocusable(true);
+			receiveScreenPanel.requestFocus();
 		}
 
-		public void run() {
-			try {
-				BufferedImage image = null;
-				while (onScreen) {
-					Thread.sleep(10);
-					try {
-						System.out.println("이미지 읽는중");
-						image = (BufferedImage) ois.readObject();
-					} catch (ClassNotFoundException e) {
-						e.printStackTrace();
-					}
-					if (image != null) { // image가 null이 아닌 경우
-						int w = receiveScreenPanel.getWidth();
-						int h = receiveScreenPanel.getHeight();
-						img = image.getScaledInstance(w, h, Image.SCALE_DEFAULT);
-						// this.repaint();
-						drawImage(img, w, h);
-					} else {
-						System.out.println("이미지 못받음");
-					}
-					if (!isVisible())
-						onScreen = false;
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-		public void drawImage(Image img, int x, int y) {
-			Graphics g = receiveScreenPanel.getGraphics();
-			g.drawImage(img, 0, 0, x, y, receiveScreenPanel);
-			receiveScreenPanel.paint(g);
-			receiveScreenPanel.repaint();
-		}
-
-		public void paint(Graphics g) {
-			if (RobotClient.img != null) {
-				g.drawImage(RobotClient.img, 0, 0, RobotClient.img.getWidth(receiveScreenPanel),
-						RobotClient.img.getHeight(receiveScreenPanel), receiveScreenPanel);
-			}
+		// connectPhone
+		public void actionPerformed(ActionEvent e) {
+			
 		}
 
 		public void mousePressed(MouseEvent e) {
@@ -691,6 +623,49 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public void mouseClicked(MouseEvent e) {
 			// TODO Auto-generated method stub
 
+		}
+
+		public void run() {
+			Thread rServer = new Thread(new ReceiveServer());
+			rServer.start();
+			connectTime = 0;
+			timer = new Timer();
+			timerTask = new TimerTask() {
+				public void run() {
+					connectTime++;
+					conTimeLabel.setText("연결 시간 : " + (int) connectTime / 60 + "분 " + connectTime % 60 + "초");
+				}
+			};
+			timer.schedule(timerTask, 1000, 1000);
+		}
+	}
+
+	class ReceiveServer implements Runnable {
+		ServerSocket receiveServer;
+		Socket receiveSocket;
+		BufferedInputStream bin;
+		BufferedImage bufImg;
+
+		public void run() {
+			try {
+				receiveServer = new ServerSocket(screen_port);
+				out.println("#connectSuccess#" + ":" + nickName + ":" + shareKey + ":"
+						+ String.valueOf(InetAddress.getLocalHost()).split("/")[1]);
+				while (receiveSocket == null) {
+					receiveSocket = receiveServer.accept();
+				}
+				System.out.println("서버소켓 생성");
+				bin = new BufferedInputStream(receiveSocket.getInputStream());
+				while (true) {
+					bufImg = ImageIO.read(ImageIO.createImageInputStream(bin));
+					if (bufImg != null)
+						ReceiveScreen.receiveScreenPanel.getGraphics().drawImage(bufImg, 0, 0,
+								ReceiveScreen.receiveScreenPanel.getWidth(),
+								ReceiveScreen.receiveScreenPanel.getHeight(), ReceiveScreen.receiveScreenPanel);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

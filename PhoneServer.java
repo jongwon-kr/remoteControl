@@ -1,4 +1,4 @@
-package Test;
+package remoteConnect;
 
 import java.awt.FlowLayout;
 import java.io.BufferedInputStream;

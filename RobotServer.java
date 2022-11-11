@@ -1,7 +1,9 @@
 package remoteConnect;
 
 import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -13,11 +15,12 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
 public class RobotServer extends JFrame implements Serializable {
-	final int server_port = 2222;
-	Socket client;
+	final int server_port = 12566;
+
 	Vector v_client_list;
 	PrintWriter requestor;
 	boolean connectionOn = false;
@@ -39,9 +42,6 @@ public class RobotServer extends JFrame implements Serializable {
 				try {
 					// 접속할 client를 관리할 Socket 객체 생성
 					Socket server = server_socket.accept();
-
-					ReceiveScreen rs = new ReceiveScreen(server);
-					rs.start();
 
 					// client가 독립적으로 io작업을 할 수 있도록 Connection class 생성
 					Connection c = new Connection(server, this);
@@ -121,7 +121,6 @@ public class RobotServer extends JFrame implements Serializable {
 				try {
 					// client로부터 메시지 한 줄 받기
 					msg = in.readLine();
-					System.out.println(msg);
 					if (msg != null) { // 메시지가 null이 아닌 경우
 						if (msg.startsWith("#click#")) {
 							message(msg);
@@ -177,43 +176,6 @@ public class RobotServer extends JFrame implements Serializable {
 			} // try-catch
 		}
 	} // end Connection Class
-
-	class ReceiveScreen extends Thread {
-		// client와 통신을 위해 만들어진 socket 이것에서 io를 뽑아낸다.
-		Socket socket;
-
-		// 화면 전송을 위한 bufferedInputStream, outputStream
-		ObjectInputStream ois;
-		ObjectOutputStream oos;
-
-		public ReceiveScreen(Socket socket) {
-			socket = socket;
-			try {
-				// inputStream 생성
-				ois = new ObjectInputStream(socket.getInputStream());
-
-				// outputStream 생성
-				oos = new ObjectOutputStream(socket.getOutputStream());
-			} catch (Exception e) {
-
-			}
-		}
-
-		public void run() {
-			Image image = null;
-			while (true) {
-				try {
-					image = (Image) ois.readObject();
-					if (image != null) { // 메시지가 null이 아닌 경우
-						oos.writeObject(image);
-					} else {
-						break;
-					}
-				} catch (Exception e) {
-				} // try-catch
-			} // while
-		}
-	}
 
 	class Check_client extends TimerTask { // TimerTask에서 상속 받으면 run()메서드 override해야됨
 		public void run() {
