@@ -3,6 +3,7 @@ package remoteConnect;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Image;
@@ -37,6 +38,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.TargetDataLine;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -48,23 +54,27 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
 
+import remoteConnect.PhoneServer.Connect;
+import remoteConnect.PhoneServer.Mic;
+import remoteConnect.PhoneServer.Speaker;
+
 public class RobotClient extends JFrame implements ActionListener, Runnable, Serializable {
 	Robot r;
 	ServerSocket server_socket;
 	Socket socket_to_host;
-	String host_address = "192.168.0.8";
+	String host_address = "192.168.0.103";
 	String send_server_address;
-	// serverì™€ í†µì‹ í•  portë²ˆí˜¸
+	// server¿Í Åë½ÅÇÒ port¹øÈ£
 	int port_to_host_number = 12566;
 	int screen_port = 3333;
-	// ê³µìœ  í‚¤
+	// °øÀ¯ Å°
 	boolean connectCheck = false, connectOn = false;
 	static String shareKey, nickName = "";
 
 	BufferedReader in = null;
 	static PrintWriter out;
 
-	// í™”ë©´ ì „ì†¡ì„ ìœ„í•œ bufferedInputStream, outputStream
+	// È­¸é Àü¼ÛÀ» À§ÇÑ bufferedInputStream, outputStream
 	BufferedInputStream bin;
 	BufferedOutputStream bout;
 
@@ -72,35 +82,35 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	String pathname, connectKey, connectName;
 
 	Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	final int SCREEN_WIDTH = screenSize.width; // í™”ë©´ ê°€ë¡œ ë„ˆë¹„
-	final int SCREEN_HEIGHT = screenSize.height; // í™”ë©´ ì„¸ë¡œ ë„ˆë¹„
-	static Image img = null; // ìƒì„±ì. UI ë°°ì¹˜.
+	final int SCREEN_WIDTH = screenSize.width; // È­¸é °¡·Î ³Êºñ
+	final int SCREEN_HEIGHT = screenSize.height; // È­¸é ¼¼·Î ³Êºñ
+	static Image img = null; // »ı¼ºÀÚ. UI ¹èÄ¡.
 
 	JDialog dialog;
-	JPanel connect_panel; // ì—°ê²°ë¶€ íŒ¨ë„
-	JPanel connect_panel_top; // ì—°ê²°ë¶€ íŒ¨ë„ ìƒë‹¨
-	JPanel connect_panel_bottom; // ì—°ê²°ë¶€ íŒ¨ë„ í•˜ë‹¨
+	JPanel connect_panel; // ¿¬°áºÎ ÆĞ³Î
+	JPanel connect_panel_top; // ¿¬°áºÎ ÆĞ³Î »ó´Ü
+	JPanel connect_panel_bottom; // ¿¬°áºÎ ÆĞ³Î ÇÏ´Ü
 
-	// ì—°ê²°ë¶€ ìƒë‹¨ íŒ¨ë„
+	// ¿¬°áºÎ »ó´Ü ÆĞ³Î
 	JLabel top_label1;
 	JLabel top_label2;
 	JLabel top_label3;
 
-	// ì—°ê²°ë¶€ í•˜ë‹¨ íŒ¨ë„
+	// ¿¬°áºÎ ÇÏ´Ü ÆĞ³Î
 	JLabel bottom_label1;
 	JTextField bottom_name_tf;
 	JTextField bottom_code_tf;
 	JButton connect_btn;
 
-	// ë¡œê·¸ì¸ ë¶€
+	// ·Î±×ÀÎ ºÎ
 	JLabel name_label;
 	JTextField id_tf;
 	JButton create_btn;
 
-	JLabel con_state_label; // ì—°ê²° ìƒíƒœ
+	JLabel con_state_label; // ¿¬°á »óÅÂ
 
 	public RobotClient() {
-		super("ì›ê²© ì ‘ì†");
+		super("¿ø°İ Á¢¼Ó");
 		ConnectCreation();
 		getContentPane().setBackground(new Color(244, 250, 255));
 		setBounds(100, 100, 645, 365);
@@ -121,23 +131,23 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		connect_panel.add(connect_panel_top);
 		connect_panel_top.setLayout(null);
 
-		top_label1 = new JLabel("PC ì›ê²©ì½”ë“œ");
+		top_label1 = new JLabel("PC ¿ø°İÄÚµå");
 		top_label1.setBounds(12, 26, 334, 30);
 		connect_panel_top.add(top_label1);
-		top_label1.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.BOLD, 22));
+		top_label1.setFont(new Font("¸¼Àº °íµñ", Font.BOLD, 22));
 		top_label1.setHorizontalAlignment(SwingConstants.CENTER);
 		top_label1.setBackground(new Color(255, 255, 255));
 
-		top_label2 = new JLabel("ì´ ì½”ë“œë¥¼ ë‹¤ë¥¸ PCì— ì…ë ¥í•˜ë©´ ì›ê²© ì ‘ì†ì´ ë©ë‹ˆë‹¤ ");
+		top_label2 = new JLabel("ÀÌ ÄÚµå¸¦ ´Ù¸¥ PC¿¡ ÀÔ·ÂÇÏ¸é ¿ø°İ Á¢¼ÓÀÌ µË´Ï´Ù ");
 		top_label2.setBounds(22, 66, 324, 19);
 		connect_panel_top.add(top_label2);
 		top_label2.setHorizontalAlignment(SwingConstants.CENTER);
-		top_label2.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.PLAIN, 13));
+		top_label2.setFont(new Font("¸¼Àº °íµñ", Font.PLAIN, 13));
 
-		top_label3 = new JLabel("ì½”ë“œë¥¼ ìƒì„±í•˜ë©´ í‘œì‹œë©ë‹ˆë‹¤.");
+		top_label3 = new JLabel("ÄÚµå¸¦ »ı¼ºÇÏ¸é Ç¥½ÃµË´Ï´Ù.");
 		top_label3.setBounds(12, 95, 334, 30);
 		connect_panel_top.add(top_label3);
-		top_label3.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.BOLD, 15));
+		top_label3.setFont(new Font("¸¼Àº °íµñ", Font.BOLD, 15));
 		top_label3.setHorizontalAlignment(SwingConstants.CENTER);
 
 		// bottom panel
@@ -146,10 +156,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		connect_panel.add(connect_panel_bottom);
 		connect_panel_bottom.setLayout(null);
 
-		bottom_label1 = new JLabel("ì ‘ì†í•˜ë ¤ëŠ” PCì˜ ë‹‰ë„¤ì„ê³¼ ì›ê²© ì½”ë“œë¥¼ ì…ë ¥í•˜ì„¸ìš”.");
+		bottom_label1 = new JLabel("Á¢¼ÓÇÏ·Á´Â PCÀÇ ´Ğ³×ÀÓ°ú ¿ø°İ ÄÚµå¸¦ ÀÔ·ÂÇÏ¼¼¿ä.");
 		bottom_label1.setBounds(12, 30, 334, 25);
 		bottom_label1.setHorizontalAlignment(SwingConstants.CENTER);
-		bottom_label1.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.BOLD, 14));
+		bottom_label1.setFont(new Font("¸¼Àº °íµñ", Font.BOLD, 14));
 		connect_panel_bottom.add(bottom_label1);
 
 		bottom_name_tf = new JTextField();
@@ -164,7 +174,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 		connect_btn = new JButton("connect");
 		connect_btn.setBounds(251, 65, 95, 52);
-		connect_btn.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.BOLD, 14));
+		connect_btn.setFont(new Font("¸¼Àº °íµñ", Font.BOLD, 14));
 		connect_panel_bottom.add(connect_btn);
 		connect_btn.setBackground(Color.white);
 		connect_btn.addActionListener(this);
@@ -174,19 +184,19 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		connect_panel_bottom.add(connect_btn);
 
 		JLabel bottom_name_label = new JLabel("Name");
-		bottom_name_label.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.PLAIN, 13));
+		bottom_name_label.setFont(new Font("¸¼Àº °íµñ", Font.PLAIN, 13));
 		bottom_name_label.setHorizontalAlignment(SwingConstants.RIGHT);
 		bottom_name_label.setBounds(12, 65, 50, 25);
 		connect_panel_bottom.add(bottom_name_label);
 
 		JLabel bottom_code_label = new JLabel("Code");
-		bottom_code_label.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.PLAIN, 13));
+		bottom_code_label.setFont(new Font("¸¼Àº °íµñ", Font.PLAIN, 13));
 		bottom_code_label.setHorizontalAlignment(SwingConstants.RIGHT);
 		bottom_code_label.setBounds(12, 92, 50, 25);
 		connect_panel_bottom.add(bottom_code_label);
 
-		name_label = new JLabel("ì‚¬ìš©í•  ë‹‰ë„¤ì„ì„ ì ì–´ì£¼ì„¸ìš”.");
-		name_label.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.BOLD, 13));
+		name_label = new JLabel("»ç¿ëÇÒ ´Ğ³×ÀÓÀ» Àû¾îÁÖ¼¼¿ä.");
+		name_label.setFont(new Font("¸¼Àº °íµñ", Font.BOLD, 13));
 		name_label.setHorizontalAlignment(SwingConstants.CENTER);
 		name_label.setBounds(22, 15, 200, 25);
 		add(name_label);
@@ -197,14 +207,14 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 		create_btn = new JButton("Create");
 		create_btn.setBackground(Color.white);
-		create_btn.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.BOLD, 12));
+		create_btn.setFont(new Font("¸¼Àº °íµñ", Font.BOLD, 12));
 		create_btn.addActionListener(this);
 		create_btn.setBounds(79, 85, 86, 30);
 		create_btn.setActionCommand("create");
 		create_btn.setFocusable(true);
 		add(create_btn);
 
-		con_state_label = new JLabel("ì ‘ì†ìƒíƒœ : OFF");
+		con_state_label = new JLabel("Á¢¼Ó»óÅÂ : OFF");
 		con_state_label.setBounds(12, 301, 226, 15);
 		add(con_state_label);
 		setVisible(true);
@@ -216,18 +226,18 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			in = new BufferedReader(new InputStreamReader(socket_to_host.getInputStream()));
 			out = new PrintWriter(socket_to_host.getOutputStream(), true);
 		} catch (UnknownHostException e) {
-			Alert("ê²½ê³ ", "ì•Œìˆ˜ì—†ëŠ” í˜¸ìŠ¤íŠ¸ì…ë‹ˆë‹¤.");
+			Alert("°æ°í", "¾Ë¼ö¾ø´Â È£½ºÆ®ÀÔ´Ï´Ù.");
 			return 0;
 		} catch (IOException e) {
 			e.printStackTrace();
-			Alert("ê²½ê³ ", "ì—°ê²°ì— ì‹¤íŒ¨í•˜ì˜€ìŠµë‹ˆë‹¤.");
+			Alert("°æ°í", "¿¬°á¿¡ ½ÇÆĞÇÏ¿´½À´Ï´Ù.");
 			return 0;
 		} // try-catch
 		return 1;
 	}
 
 	public void Alert(String alert_title, String alert_message) {
-		// alert ë©”ì†Œë“œ
+		// alert ¸Ş¼Òµå
 		dialog = new JDialog(this, alert_title, true);
 		JLabel lll = new JLabel(alert_message);
 		lll.setVerticalTextPosition(SwingConstants.CENTER);
@@ -240,7 +250,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		dialog.show();
 	}
 
-	// ì´ë²¤íŠ¸
+	// ÀÌº¥Æ®
 	public void actionPerformed(ActionEvent e) {
 		String command = e.getActionCommand();
 		Thread t, rt;
@@ -252,7 +262,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				int cnt = 0;
 				while (!connectCheck) {
 					Thread.sleep(200);
-					System.out.println("ì„œë²„ì— ì ‘ì†ì¤‘ì…ë‹ˆë‹¤.");
+					System.out.println("¼­¹ö¿¡ Á¢¼ÓÁßÀÔ´Ï´Ù.");
 					cnt++;
 					if (cnt == 6)
 						break;
@@ -261,26 +271,26 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				e1.printStackTrace();
 			}
 			if (connectCheck) {
-				Alert("ì ‘ì† ì„±ê³µ", "ì ‘ì†ì— ì„±ê³µí–ˆìŠµë‹ˆë‹¤.");
+				Alert("Á¢¼Ó ¼º°ø", "Á¢¼Ó¿¡ ¼º°øÇß½À´Ï´Ù.");
 				Thread rScreen = new Thread(new ReceiveScreen());
 				rScreen.start();
 				System.out.println("???");
 			} else {
-				Alert("ì ‘ì† ì‹¤íŒ¨", "ì›ê²©ì ‘ì†ì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.");
+				Alert("Á¢¼Ó ½ÇÆĞ", "¿ø°İÁ¢¼Ó¿¡ ½ÇÆĞÇß½À´Ï´Ù.");
 			}
 		} else if (command.equals("create")) {
 			shareKey = String.valueOf((int) (Math.random() * 100000));
 			System.out.println(shareKey);
-			top_label3.setText("ì›ê²©ì½”ë“œ : " + String.valueOf(shareKey));
+			top_label3.setText("¿ø°İÄÚµå : " + String.valueOf(shareKey));
 			nickName = id_tf.getText();
-			name_label.setText(nickName + "ìœ¼ë¡œ ì ‘ì† ë˜ì—ˆìŠµë‹ˆë‹¤.");
+			name_label.setText(nickName + "À¸·Î Á¢¼Ó µÇ¾ú½À´Ï´Ù.");
 			id_tf.setVisible(false);
 			create_btn.setVisible(false);
 			connect_btn.setEnabled(true);
 			bottom_name_tf.setEnabled(true);
 			bottom_code_tf.setEnabled(true);
-			con_state_label.setText("ì ‘ì†ìƒíƒœ : ON");
-			Alert("ê³µìœ ", "ê³µìœ í‚¤ê°€ ìƒì„±ë˜ì—ˆìŠµë‹ˆë‹¤. : " + String.valueOf(shareKey));
+			con_state_label.setText("Á¢¼Ó»óÅÂ : ON");
+			Alert("°øÀ¯", "°øÀ¯Å°°¡ »ı¼ºµÇ¾ú½À´Ï´Ù. : " + String.valueOf(shareKey));
 		}
 	}
 
@@ -291,7 +301,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			double x, y;
 			while (true) {
 				in_msg = in.readLine();
-				System.out.println("ë„˜ì–´ì˜¨ ë©”ì‹œì§€" + in_msg);
+				System.out.println("³Ñ¾î¿Â ¸Ş½ÃÁö" + in_msg);
 				if (in_msg != null) {
 					if (in_msg.startsWith("#press#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
@@ -340,7 +350,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 						}
 					} else if (in_msg.startsWith("#share#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
-						// í™”ë©´ ê³µìœ  ì‹œì‘
+						// È­¸é °øÀ¯ ½ÃÀÛ
 						Thread sc = new Thread(new SendScreen());
 						sc.start();
 					} else if (in_msg.startsWith("#connectSuccess#")) {
@@ -348,6 +358,9 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 						if (!shareKey.equals(in_msg.split(":")[1]) && !nickName.equals(in_msg.split(":")[2])) {
 							send_server_address = in_msg.split(":")[3];
 						}
+					} else if (in_msg.startsWith("#phone#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						Thread pt = new Thread(new Phone());
 					}
 				} else {
 					break;
@@ -444,7 +457,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 	}
 
-	// ì ‘ì†ì„ ìš”ì²­í•˜ëŠ” ì»´í“¨í„°ì—ê²Œ í™”ë©´ ì „ì†¡
+	// Á¢¼ÓÀ» ¿äÃ»ÇÏ´Â ÄÄÇ»ÅÍ¿¡°Ô È­¸é Àü¼Û
 	class SendScreen implements Runnable {
 		Socket sendSocket = null;
 		BufferedOutputStream bout;
@@ -464,13 +477,13 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 					try {
 						while (sendSocket == null) {
 							sendSocket = new Socket(send_server_address, 3333);
-							System.out.println(send_server_address + "ì— ì—°ê²°ì™„ë£Œ");
+							System.out.println(send_server_address + "¿¡ ¿¬°á¿Ï·á");
 						}
 						bout = new BufferedOutputStream(sendSocket.getOutputStream());
 						while (bout != null) {
 							Thread.sleep(100);
 							bufImg = capture();
-							ImageIO.write(bufImg, "png", bout);
+							ImageIO.write(bufImg, "bmp", bout);
 							bout.flush();
 						}
 					} catch (IOException e) {
@@ -488,7 +501,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			try {
 				robot = new Robot();
 				Rectangle area = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-				bufImage = robot.createScreenCapture(area); // Robot í´ë˜ìŠ¤ë¥¼ ì´ìš©í•˜ì—¬ ìŠ¤í¬ë¦° ìº¡ì³.
+				bufImage = robot.createScreenCapture(area); // Robot Å¬·¡½º¸¦ ÀÌ¿ëÇÏ¿© ½ºÅ©¸° Ä¸ÃÄ.
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -496,7 +509,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 	}
 
-	// ì ‘ì†ìš”ì²­í•œ í™”ë©´ ë°›ì•„ì˜¤ê¸°
+	// Á¢¼Ó¿äÃ»ÇÑ È­¸é ¹Ş¾Æ¿À±â
 	class ReceiveScreen extends JFrame
 			implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener, KeyListener, ActionListener {
 		boolean onScreen = false;
@@ -504,14 +517,14 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		JPanel connectStatePanel;
 		JLabel conTimeLabel;
 		JLabel conUserLabel;
-		JButton phoneBtn;
+		static JButton phoneBtn;
 		static JPanel receiveScreenPanel;
 		Timer timer;
 		TimerTask timerTask;
 		int connectTime;
 
 		public ReceiveScreen() {
-			super("ì ‘ì†í™”ë©´");
+			super("Á¢¼ÓÈ­¸é");
 			onScreen = true;
 			connectStatePanel = new JPanel();
 			connectStatePanel.setBorder(new MatteBorder(3, 0, 0, 0, (Color) new Color(68, 68, 255)));
@@ -519,20 +532,21 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			connectStatePanel.setLayout(new BorderLayout());
 			add("South", connectStatePanel);
 
-			conTimeLabel = new JLabel("ì—°ê²° ì‹œê°„ : 0ë¶„ 0ì´ˆ");
-			conTimeLabel.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.PLAIN, 14));
+			conTimeLabel = new JLabel("¿¬°á ½Ã°£ : 0ºĞ 0ÃÊ");
+			conTimeLabel.setFont(new Font("¸¼Àº °íµñ", Font.PLAIN, 14));
 			conTimeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 			connectStatePanel.add("West", conTimeLabel);
 
-			JLabel conUserLabel = new JLabel("ì—°ê²° ìƒëŒ€ : " + bottom_name_tf.getText());
-			conUserLabel.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.PLAIN, 14));
+			JLabel conUserLabel = new JLabel("¿¬°á »ó´ë : " + bottom_name_tf.getText());
+			conUserLabel.setFont(new Font("¸¼Àº °íµñ", Font.PLAIN, 14));
 			conUserLabel.setHorizontalAlignment(SwingConstants.CENTER);
 			connectStatePanel.add("Center", conUserLabel);
 
-			JButton phoneBtn = new JButton("ìŒì„± ì—°ê²°");
+			JButton phoneBtn = new JButton("À½¼º ¿¬°á");
 			phoneBtn.addActionListener(this);
 			phoneBtn.setActionCommand("phone");
-			phoneBtn.setFont(new Font("ë§‘ì€ ê³ ë”•", Font.PLAIN, 14));
+			phoneBtn.setFocusable(false);
+			phoneBtn.setFont(new Font("¸¼Àº °íµñ", Font.PLAIN, 14));
 
 			connectStatePanel.add("East", phoneBtn);
 
@@ -551,7 +565,13 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 		// connectPhone
 		public void actionPerformed(ActionEvent e) {
-			
+			String command = e.getActionCommand();
+			Thread pt = null;
+			if (command.equals("phone")) {
+				System.out.println("À½¼º ÅëÈ­");
+				pt = new Thread(new PhoneServer());
+				out.println("#phone#" + ":" + connectKey + ":" + connectName);
+			}
 		}
 
 		public void mousePressed(MouseEvent e) {
@@ -563,7 +583,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				checkMouseButton = "right";
 			}
 			out.println("#press#" + ":" + connectKey + ":" + connectName + ":" + checkMouseButton);
-			// ë§ˆìš°ìŠ¤ ë²„íŠ¼ í´ë¦­
+			// ¸¶¿ì½º ¹öÆ° Å¬¸¯
 		}
 
 		public void mouseReleased(MouseEvent e) {
@@ -599,7 +619,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 
 		public void mouseWheelMoved(MouseWheelEvent e) {
-			// ì•„ë˜ë¡œ 1 ìœ„ë¡œ -1
+			// ¾Æ·¡·Î 1 À§·Î -1
 			out.println("#wheel#" + ":" + connectKey + ":" + connectName + ":" + String.valueOf(e.getWheelRotation()));
 		}
 
@@ -608,7 +628,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 
 		public void keyPressed(KeyEvent e) {
-			// í•œì˜ë³€í™˜ì´ ì•ˆë¨,, ì…ë ¥í•  ë•Œ í•œê¸€ì´ë©´ pressê°€ ì¼ì–´ë‚˜ì§€ ì•ŠëŠ”ë‹¤.
+			// ÇÑ¿µº¯È¯ÀÌ ¾ÈµÊ,, ÀÔ·ÂÇÒ ¶§ ÇÑ±ÛÀÌ¸é press°¡ ÀÏ¾î³ªÁö ¾Ê´Â´Ù.
 			if (e.getKeyCode() != 0)
 				out.println(
 						"#keyPressed#" + ":" + connectKey + ":" + connectName + ":" + String.valueOf(e.getKeyCode()));
@@ -633,7 +653,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			timerTask = new TimerTask() {
 				public void run() {
 					connectTime++;
-					conTimeLabel.setText("ì—°ê²° ì‹œê°„ : " + (int) connectTime / 60 + "ë¶„ " + connectTime % 60 + "ì´ˆ");
+					conTimeLabel.setText("¿¬°á ½Ã°£ : " + (int) connectTime / 60 + "ºĞ " + connectTime % 60 + "ÃÊ");
 				}
 			};
 			timer.schedule(timerTask, 1000, 1000);
@@ -654,7 +674,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				while (receiveSocket == null) {
 					receiveSocket = receiveServer.accept();
 				}
-				System.out.println("ì„œë²„ì†Œì¼“ ìƒì„±");
+				System.out.println("¼­¹ö¼ÒÄÏ »ı¼º");
 				bin = new BufferedInputStream(receiveSocket.getInputStream());
 				while (true) {
 					bufImg = ImageIO.read(ImageIO.createImageInputStream(bin));
@@ -666,6 +686,299 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+
+	// ÀüÈ­
+	class Phone extends JFrame implements Runnable {
+		public JLabel intro = new JLabel("Waiting for connect...");
+		public JLabel time = new JLabel("0:00");
+		public int time_cnt = 0;
+
+		public Connect con = null;
+		public Mic mic = null;
+		public Speaker spk = null;
+
+		public AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 11025, 16, 2, 4, 11025, false);
+
+		public Phone() {
+			this.setSize(300, 80);
+			this.setTitle("Phone");
+			this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			this.setResizable(true);
+			this.setLayout(new FlowLayout());
+			this.setVisible(true);
+			this.setAlwaysOnTop(true);
+
+			this.add(intro);
+			this.add(time);
+
+			this.con = new Connect(this);
+			this.mic = new Mic(this);
+			this.spk = new Speaker(this);
+
+			startCommunication();
+		}
+
+		public void startCommunication() {
+			this.mic.start();
+			this.spk.start();
+		}
+
+		public class Connect extends Thread {
+			Socket socket = null;
+			BufferedInputStream input = null;
+			BufferedOutputStream output = null;
+			byte[] temp = new byte[10000];
+
+			Phone p = null;
+
+			Connect(Phone p) {
+				this.p = p;
+				try {
+					socket = new Socket("127.0.0.1", 9999);
+					input = new BufferedInputStream(socket.getInputStream());
+					output = new BufferedOutputStream(socket.getOutputStream());
+
+					p.intro.setText("Connected!");
+					this.start();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void run() {
+				while (true) {
+					int t = p.time_cnt++;
+					p.time.setText(t / 60 + ":" + t % 60);
+					try {
+						this.sleep(1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+
+		public class Mic extends Thread {
+			TargetDataLine targetLine = null;
+			byte[] data = null;
+			Phone p = null;
+
+			public Mic(Phone p) {
+				this.p = p;
+				try {
+					DataLine.Info info = new DataLine.Info(TargetDataLine.class, p.format);
+					targetLine = (TargetDataLine) AudioSystem.getLine(info);
+					targetLine.open();
+					data = new byte[(int) (targetLine.getBufferSize() / 5512)];
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void run() {
+				try {
+					targetLine.open();
+					targetLine.start();
+					while (true) {
+						targetLine.read(data, 0, data.length);
+						p.con.output.write(data, 0, data.length);
+						p.con.output.flush();
+					}
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+
+				}
+			}
+		}
+
+		public class Speaker extends Thread {
+			SourceDataLine sourceLine = null;
+			byte[] data = null;
+			Phone p = null;
+
+			Speaker(Phone p) {
+				this.p = p;
+				try {
+					DataLine.Info info = new DataLine.Info(SourceDataLine.class, p.format);
+					sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+					sourceLine.open();
+					data = new byte[(int) (sourceLine.getBufferSize() / 5512)];
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void run() {
+				try {
+					sourceLine.open();
+					sourceLine.start();
+					while (true) {
+						p.con.input.read(data, 0, data.length);
+						sourceLine.write(data, 0, data.length);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+
+				}
+			}
+		}
+
+		public void run() {
+			// TODO Auto-generated method stub
+
+		}
+	}
+
+	// ÀüÈ£ ¼­¹ö
+	class PhoneServer extends JFrame implements Runnable {
+		public JLabel intro = new JLabel("Waiting for connect...");
+		public JLabel time = new JLabel("0:00");
+		public int time_cnt = 0;
+
+		public Connect con = null;
+		public Mic mic = null;
+		public Speaker spk = null;
+
+		public AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 11025, 16, 2, 4, 11025, false);
+
+		public PhoneServer() {
+			this.setSize(300, 80);
+			this.setTitle("Phone");
+			this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			this.setResizable(true);
+			this.setLayout(new FlowLayout());
+			this.setVisible(true);
+			this.setAlwaysOnTop(true);
+
+			this.add(intro);
+			this.add(time);
+
+			this.con = new Connect(this);
+			this.mic = new Mic(this);
+			this.spk = new Speaker(this);
+		}
+
+		public void startCommunication() {
+			this.mic.start();
+			this.spk.start();
+		}
+
+		public class Connect extends Thread {
+			ServerSocket ss = null;
+			Socket socket = null;
+			BufferedInputStream input = null;
+			BufferedOutputStream output = null;
+			byte[] temp = new byte[10000];
+
+			PhoneServer p = null;
+
+			Connect(PhoneServer p) {
+				this.p = p;
+				try {
+					ss = new ServerSocket(9999);
+					this.start();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void run() {
+				try {
+					socket = ss.accept();
+					input = new BufferedInputStream(socket.getInputStream());
+					output = new BufferedOutputStream(socket.getOutputStream());
+
+					p.startCommunication();
+					p.intro.setText("Connected!");
+					while (true) {
+						int t = p.time_cnt++;
+						p.time.setText(t / 60 + ":" + t % 60);
+						try {
+							this.sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		public class Mic extends Thread {
+			TargetDataLine targetLine = null;
+			byte[] data = null;
+			PhoneServer p = null;
+
+			public Mic(PhoneServer p) {
+				this.p = p;
+				try {
+					DataLine.Info info = new DataLine.Info(TargetDataLine.class, p.format);
+					targetLine = (TargetDataLine) AudioSystem.getLine(info);
+					targetLine.open();
+					data = new byte[(int) (targetLine.getBufferSize() / 5512)];
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void run() {
+				try {
+					targetLine.open();
+					targetLine.start();
+					while (true) {
+						targetLine.read(data, 0, data.length);
+						p.con.output.write(data, 0, data.length);
+						p.con.output.flush();
+					}
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+
+				}
+			}
+		}
+
+		public class Speaker extends Thread {
+			SourceDataLine sourceLine = null;
+			byte[] data = null;
+			PhoneServer p = null;
+
+			Speaker(PhoneServer p) {
+				this.p = p;
+				try {
+					DataLine.Info info = new DataLine.Info(SourceDataLine.class, p.format);
+					sourceLine = (SourceDataLine) AudioSystem.getLine(info);
+					sourceLine.open();
+					data = new byte[(int) (sourceLine.getBufferSize() / 5512)];
+					System.out.println("Ready to use Speaker");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			public void run() {
+				try {
+					sourceLine.open();
+					sourceLine.start();
+					while (true) {
+						p.con.input.read(data, 0, data.length);
+						sourceLine.write(data, 0, data.length);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+
+				}
+			}
+		}
+
+		public void run() {
+
 		}
 	}
 

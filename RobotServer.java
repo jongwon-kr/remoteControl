@@ -146,6 +146,8 @@ public class RobotServer extends JFrame implements Serializable {
 							message(msg);
 						} else if (msg.startsWith("#connectSuccess#")) {
 							message(msg);
+						} else if (msg.startsWith("#phone#")) {
+							message(msg);
 						}
 					} else {
 						break;
