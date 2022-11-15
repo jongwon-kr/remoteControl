@@ -148,6 +148,8 @@ public class RobotServer extends JFrame implements Serializable {
 							message(msg);
 						} else if (msg.startsWith("#phone#")) {
 							message(msg);
+						} else if (msg.startsWith("#p2p#")) {
+							message(msg);
 						}
 					} else {
 						break;
