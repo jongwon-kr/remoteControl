@@ -26,6 +26,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -68,6 +69,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	boolean connectCheck = false, connectOn = false;
 	static String shareKey, nickName = "";
 	static String savePath = "C:/";
+	static String sendFile = "";
 
 	BufferedReader in = null;
 	static PrintWriter out;
@@ -250,6 +252,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		dialog.show();
 	}
 
+	// 저장경로 설정 메소드
 	public void save_directory_choose() {
 		savefilechooser = new JFileChooser();
 		savefilechooser.setCurrentDirectory(new File(savePath));
@@ -259,6 +262,19 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		if (returnVal1 == savefilechooser.APPROVE_OPTION) {
 			savePath = savefilechooser.getSelectedFile().getAbsolutePath();
 			System.out.println("다운로드 폴더가 " + savePath + "로 지정되었습니다");
+		}
+	}
+
+	// 보낼파일 선택
+	public void send_file_choose() {
+		JFileChooser sendfilechooser = new JFileChooser();
+		sendfilechooser.setCurrentDirectory(new File(":C/"));
+		sendfilechooser.setFileSelectionMode(sendfilechooser.FILES_ONLY);
+
+		int returnVal1 = sendfilechooser.showSaveDialog(null); // 저장
+		if (returnVal1 == sendfilechooser.APPROVE_OPTION) {
+			sendFile = sendfilechooser.getSelectedFile().getAbsolutePath();
+			System.out.println("보낼 파일이 " + sendFile + "로 지정되었습니다");
 		}
 	}
 
@@ -387,48 +403,46 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 	}// run
 
-	class P2p_server extends Thread {
+	class P2P_server extends Thread {
 		ServerSocket p2p_server_socket;
-		Socket p2p_client;
+		Socket p2p_socket;
 		PrintWriter requestor;
 
-		public P2p_server(ServerSocket ss) {
-			p2p_server_socket = ss;
+		public P2P_server() {
 			start();
-		}
-
-		public synchronized void setRequestor(PrintWriter requestor) {
-			this.requestor = requestor;
 		}
 
 		public void run() {
 			while (true) {
 				try {
-					p2p_client = p2p_server_socket.accept();
+					p2p_server_socket = new ServerSocket(5566);
+					out.println("#p2p#" + ":" + connectKey + ":" + connectName + ":" + send_server_address);
+					while (p2p_socket == null) {
+						p2p_socket = p2p_server_socket.accept();
+					}
 					System.out.println("p2p_server run");
 				} catch (Exception ex) {
 
 				}
-				P2p_connection pc = new P2p_connection(p2p_client, this);
+				P2P_connection pc = new P2P_connection(p2p_socket, this);
 				pc.start();
 			}
 		}
 	}
 
-	class P2p_connection extends Thread {
+	// sendFile
+	class P2P_connection extends Thread {
 		Socket socket;
-		P2p_server p2p_server;
-		BufferedReader in;
+		P2P_server p2p_server;
 		FileInputStream fis;
 		File file;
 		String file_name;
 		BufferedOutputStream out;
 
-		public P2p_connection(Socket s, P2p_server p2p) {
+		public P2P_connection(Socket s, P2P_server p2p) {
 			socket = s;
 			p2p_server = p2p;
 			try {
-				in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				out = new BufferedOutputStream(socket.getOutputStream());
 			} catch (Exception ex) {
 
@@ -436,41 +450,40 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 
 		public void run() {
-			String msg = "";
 			System.out.println("p2p_connection run");
 			try {
-				while (true) {
-					msg = in.readLine();
-					if (msg != null) {
-						System.out.println("incoming msg : " + msg);
-						if (msg.startsWith("#r#")) {
-							file_name = msg.substring(3);
-							file = new File(pathname + file_name);
-							fis = new FileInputStream(file);
-							int c;
-							while ((c = fis.read()) != -1) {
-								out.write(c);
-							}
-							out.flush();
-							break;
-						}
-					} else {
-						break;
-					}
+				file = new File(sendFile);
+				fis = new FileInputStream(file);
+				int c;
+				while ((c = fis.read()) != -1) {
+					out.write(c);
 				}
+				out.flush();
 			} catch (Exception ex) {
 				System.err.println("in the P2p_connection : " + ex);
 			} finally {
 				try {
 					out.close();
 					fis.close();
-					in.close();
 				} catch (Exception exc) {
 					System.err.println("in the P2p_connection finally : " + exc);
 				}
 			}
 		}
+	}
 
+	class download implements Runnable {
+		String filename, p2p_address;
+		Socket socket;
+		BufferedInputStream in;
+		File file;
+		FileOutputStream fos;
+		double fileSize, size = 0;
+
+		public void run() {
+			// TODO Auto-generated method stub
+
+		}
 	}
 
 	// 접속을 요청하는 컴퓨터에게 화면 전송
