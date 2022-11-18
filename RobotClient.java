@@ -26,6 +26,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -60,16 +61,17 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	Robot r;
 	ServerSocket server_socket;
 	Socket socket_to_host;
+	// server와 통신할 port번호
 	String host_address = "192.168.0.8";
 	String send_server_address;
-	// server와 통신할 port번호
 	int port_to_host_number = 12566;
-	int screen_port = 3333;
+	int screen_port = 12567;
 	// 공유 키
 	boolean connectCheck = false, connectOn = false;
 	static String shareKey, nickName = "";
-	static String savePath = "C:/";
-	static String sendFile = "";
+	static String savePath = "C:\\";
+	static String sendFilePath = "";
+	static File sendFile;
 
 	BufferedReader in = null;
 	static PrintWriter out;
@@ -255,11 +257,11 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	// 저장경로 설정 메소드
 	public void save_directory_choose() {
 		savefilechooser = new JFileChooser();
+		savefilechooser.setDialogTitle("저장 폴더 지정");
 		savefilechooser.setCurrentDirectory(new File(savePath));
 		savefilechooser.setFileSelectionMode(savefilechooser.DIRECTORIES_ONLY);
 
-		int returnVal1 = savefilechooser.showSaveDialog(null); // 저장
-		if (returnVal1 == savefilechooser.APPROVE_OPTION) {
+		if (savefilechooser.showSaveDialog(this) == savefilechooser.APPROVE_OPTION) {
 			savePath = savefilechooser.getSelectedFile().getAbsolutePath();
 			System.out.println("다운로드 폴더가 " + savePath + "로 지정되었습니다");
 		}
@@ -268,12 +270,13 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	// 보낼파일 선택
 	public void send_file_choose() {
 		JFileChooser sendfilechooser = new JFileChooser();
+		sendfilechooser.setDialogTitle("보낼 파일 선택");
 		sendfilechooser.setCurrentDirectory(new File(":C/"));
 		sendfilechooser.setFileSelectionMode(sendfilechooser.FILES_ONLY);
 
-		int returnVal1 = sendfilechooser.showSaveDialog(null); // 저장
-		if (returnVal1 == sendfilechooser.APPROVE_OPTION) {
-			sendFile = sendfilechooser.getSelectedFile().getAbsolutePath();
+		if (sendfilechooser.showSaveDialog(this) == sendfilechooser.APPROVE_OPTION) {
+			sendFilePath = sendfilechooser.getSelectedFile().getAbsolutePath();
+			sendFile = new File(sendFilePath);
 			System.out.println("보낼 파일이 " + sendFile + "로 지정되었습니다");
 		}
 	}
@@ -393,6 +396,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 					} else if (in_msg.startsWith("#phone#") && shareKey.equals(in_msg.split(":")[1])
 							&& nickName.equals(in_msg.split(":")[2])) {
 						Thread pt = new Thread(new Phone());
+					} else if (in_msg.startsWith("#p2p#") && shareKey.equals(in_msg.split(":")[1])
+							&& nickName.equals(in_msg.split(":")[2])) {
+						Thread dt = new Thread(new Download(in_msg.split(":")[3], in_msg.split(":")[4]));
+						dt.start();
 					}
 				} else {
 					break;
@@ -407,26 +414,27 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		ServerSocket p2p_server_socket;
 		Socket p2p_socket;
 		PrintWriter requestor;
+		File sendFile;
 
-		public P2P_server() {
+		public P2P_server(File sendFile) {
+			this.sendFile = sendFile;
 			start();
 		}
 
 		public void run() {
-			while (true) {
-				try {
-					p2p_server_socket = new ServerSocket(5566);
-					out.println("#p2p#" + ":" + connectKey + ":" + connectName + ":" + send_server_address);
-					while (p2p_socket == null) {
-						p2p_socket = p2p_server_socket.accept();
-					}
-					System.out.println("p2p_server run");
-				} catch (Exception ex) {
-
+			try {
+				p2p_server_socket = new ServerSocket(5566);
+				out.println("#p2p#" + ":" + connectKey + ":" + connectName + ":" + send_server_address + ":"
+						+ sendFile.getName());
+				while (p2p_socket == null) {
+					p2p_socket = p2p_server_socket.accept();
 				}
-				P2P_connection pc = new P2P_connection(p2p_socket, this);
-				pc.start();
+				System.out.println("p2p_server run");
+			} catch (Exception ex) {
+
 			}
+			P2P_connection pc = new P2P_connection(p2p_socket, this);
+			pc.start();
 		}
 	}
 
@@ -435,15 +443,15 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		Socket socket;
 		P2P_server p2p_server;
 		FileInputStream fis;
-		File file;
 		String file_name;
-		BufferedOutputStream out;
+		BufferedOutputStream bout;
 
 		public P2P_connection(Socket s, P2P_server p2p) {
 			socket = s;
 			p2p_server = p2p;
+			file_name = sendFile.getName();
 			try {
-				out = new BufferedOutputStream(socket.getOutputStream());
+				bout = new BufferedOutputStream(socket.getOutputStream());
 			} catch (Exception ex) {
 
 			}
@@ -452,19 +460,19 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public void run() {
 			System.out.println("p2p_connection run");
 			try {
-				file = new File(sendFile);
-				fis = new FileInputStream(file);
+				fis = new FileInputStream(sendFile);
 				int c;
 				while ((c = fis.read()) != -1) {
-					out.write(c);
+					bout.write(c);
 				}
-				out.flush();
+				bout.flush();
 			} catch (Exception ex) {
 				System.err.println("in the P2p_connection : " + ex);
 			} finally {
 				try {
-					out.close();
+					bout.close();
 					fis.close();
+					p2p_server.p2p_server_socket.close();
 				} catch (Exception exc) {
 					System.err.println("in the P2p_connection finally : " + exc);
 				}
@@ -472,21 +480,56 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 	}
 
-	class download implements Runnable {
-		String filename, p2p_address;
+	class Download implements Runnable {
+		String download_filename;
 		Socket socket;
 		BufferedInputStream in;
 		File file;
 		FileOutputStream fos;
 		double fileSize, size = 0;
 
-		public void run() {
-			// TODO Auto-generated method stub
+		public Download(String p2p_address, String receiveFileName) {
+			if (savePath.equals("C:\\")) {
+				save_directory_choose();
+				download_filename = savePath + "\\" + receiveFileName;
+			} else
+				download_filename = savePath + "\\" + receiveFileName;
+			try {
+				socket = new Socket(p2p_address, 5566);
+				in = new BufferedInputStream(socket.getInputStream());
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 
+		public void run() {
+
+			System.out.println(download_filename);
+			file = new File(download_filename);
+			try {
+				fos = new FileOutputStream(file);
+				int c;
+				while ((c = in.read()) != -1) {
+					size += c;
+					fos.write(c);
+				}
+				Alert("OK", "파일을 성공적으로 다운로드 하였습니다.");
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					fos.close();
+					in.close();
+					socket.close();
+				} catch (Exception ex) {
+				}
+			}
 		}
 	}
 
-	// 접속을 요청하는 컴퓨터에게 화면 전송
+// 접속을 요청하는 컴퓨터에게 화면 전송
 	class SendScreen implements Runnable {
 		Socket sendSocket = null;
 		BufferedOutputStream bout;
@@ -505,18 +548,20 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				if (connectOn) {
 					try {
 						while (sendSocket == null) {
-							sendSocket = new Socket(send_server_address, 3333);
+							sendSocket = new Socket(send_server_address, screen_port);
 							System.out.println(send_server_address + "에 연결완료");
 						}
 						bout = new BufferedOutputStream(sendSocket.getOutputStream());
 						while (bout != null) {
-							Thread.sleep(100);
 							bufImg = capture();
 							ImageIO.write(bufImg, "bmp", bout);
 							bout.flush();
 						}
+						bout.close();
+						sendSocket.close();
 					} catch (IOException e) {
 						e.printStackTrace();
+					} finally {
 					}
 				}
 			} catch (InterruptedException e) {
@@ -538,7 +583,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 	}
 
-	// 접속요청한 화면 받아오기
+// 접속요청한 화면 받아오기
 	class ReceiveScreen extends JFrame
 			implements Runnable, MouseListener, MouseMotionListener, MouseWheelListener, KeyListener, ActionListener {
 		boolean onScreen = false;
@@ -576,8 +621,17 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			phoneBtn.setActionCommand("phone");
 			phoneBtn.setFocusable(false);
 			phoneBtn.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
+			JButton sendFileBtn = new JButton("파일보내기");
+			sendFileBtn.addActionListener(this);
+			sendFileBtn.setActionCommand("sendFile");
+			sendFileBtn.setFocusable(false);
+			sendFileBtn.setFont(new Font("맑은 고딕", Font.PLAIN, 14));
 
-			connectStatePanel.add("East", phoneBtn);
+			JPanel tempPanel = new JPanel(new FlowLayout());
+			tempPanel.setBackground(new Color(244, 250, 255));
+			connectStatePanel.add("East", tempPanel);
+			tempPanel.add(sendFileBtn);
+			tempPanel.add(phoneBtn);
 
 			receiveScreenPanel = new JPanel();
 			receiveScreenPanel.setBackground(new Color(244, 250, 255));
@@ -600,6 +654,10 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 				System.out.println("음성 통화");
 				pt = new Thread(new PhoneServer());
 				out.println("#phone#" + ":" + connectKey + ":" + connectName);
+			} else if (command.equals("sendFile")) {
+				System.out.println("파일보내기");
+				send_file_choose();
+				P2P_server ps = new P2P_server(sendFile);
 			}
 		}
 
@@ -715,10 +773,11 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+
 		}
 	}
 
-	// 전화
+// 전화
 	class Phone extends JFrame implements Runnable {
 		public JLabel intro = new JLabel("Waiting for connect...");
 		public JLabel time = new JLabel("0:00");
@@ -862,7 +921,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		}
 	}
 
-	// 전호 서버
+// 전호 서버
 	class PhoneServer extends JFrame implements Runnable {
 		public JLabel intro = new JLabel("Waiting for connect...");
 		public JLabel time = new JLabel("0:00");
@@ -1009,6 +1068,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public void run() {
 
 		}
+
 	}
 
 	public static void main(String[] args) {
