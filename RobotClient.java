@@ -26,7 +26,6 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -35,6 +34,7 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -62,7 +62,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 	ServerSocket server_socket;
 	Socket socket_to_host;
 	// server와 통신할 port번호
-	String host_address = "192.168.0.8";
+	String host_address = "211.108.193.119";
 	String send_server_address;
 	int port_to_host_number = 12566;
 	int screen_port = 12567;
@@ -423,7 +423,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 		public void run() {
 			try {
-				p2p_server_socket = new ServerSocket(5566);
+				p2p_server_socket = new ServerSocket(12563);
 				out.println("#p2p#" + ":" + connectKey + ":" + connectName + ":" + send_server_address + ":"
 						+ sendFile.getName());
 				while (p2p_socket == null) {
@@ -756,8 +756,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public void run() {
 			try {
 				receiveServer = new ServerSocket(screen_port);
-				out.println("#connectSuccess#" + ":" + nickName + ":" + shareKey + ":"
-						+ String.valueOf(InetAddress.getLocalHost()).split("/")[1]);
+				out.println("#connectSuccess#" + ":" + nickName + ":" + shareKey + ":" + getPublicAddress());
 				while (receiveSocket == null) {
 					receiveSocket = receiveServer.accept();
 				}
@@ -792,7 +791,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public Phone() {
 			this.setSize(300, 80);
 			this.setTitle("Phone");
-			this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 			this.setResizable(true);
 			this.setLayout(new FlowLayout());
 			this.setVisible(true);
@@ -824,7 +823,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			Connect(Phone p) {
 				this.p = p;
 				try {
-					socket = new Socket("send_server_address", 9999);
+					socket = new Socket(send_server_address, 12568);
 					input = new BufferedInputStream(socket.getInputStream());
 					output = new BufferedOutputStream(socket.getOutputStream());
 
@@ -936,7 +935,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 		public PhoneServer() {
 			this.setSize(300, 80);
 			this.setTitle("Phone");
-			this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 			this.setResizable(true);
 			this.setLayout(new FlowLayout());
 			this.setVisible(true);
@@ -967,7 +966,7 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 			Connect(PhoneServer p) {
 				this.p = p;
 				try {
-					ss = new ServerSocket(9999);
+					ss = new ServerSocket(12568);
 					this.start();
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -1069,6 +1068,27 @@ public class RobotClient extends JFrame implements ActionListener, Runnable, Ser
 
 		}
 
+	}
+
+	public String getPublicAddress() {
+		String line, ip = null;
+		URL findIp;
+		try {
+			findIp = new URL("https://www.findip.kr/");
+			BufferedReader reader = new BufferedReader(new InputStreamReader(findIp.openStream(), "UTF-8"));
+			while ((line = reader.readLine()) != null) {
+				if (line.contains("w3-xxlarge")) {
+					ip = line.split(":")[1].substring(1);
+					ip = ip.substring(0, ip.length() - 5);
+				}
+			}
+			System.out.println(ip);
+			reader.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return ip;
 	}
 
 	public static void main(String[] args) {
