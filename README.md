@@ -22,7 +22,7 @@ PC에 문제가 생겨 원격으로 PC조작이 필요한 상황처럼 PC를 원
 ## 이미지
 ## 서버
 ### 클라이언트 접속 X
-<img src="https://github.com/jongwon-kr/remoteControl/assets/76871947/c0adb825-b8f6-4aca-bd91-a46421446315">
+<img src="https://github.com/jongwon-kr/remoteControl/assets/76871947/c0adb825-b8f6-4aca-bd91-a46421446315" width="200" height="100">
 
 ### 클라이언트 접속 O
 ![image](https://github.com/jongwon-kr/remoteControl/assets/76871947/82861886-5146-476f-b33d-892201d4c067)
